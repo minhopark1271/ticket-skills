@@ -30,6 +30,10 @@ wiki:
 
 ## 설치 (새 PC)
 
+각 `ticket-*` 디렉토리를 `~/.claude/skills/` 에 링크한다. 원본은 repo 에 두고 링크만 거므로 `git pull` 하면 스킬도 자동 반영된다.
+
+### macOS / Linux (symlink)
+
 ```bash
 # 1. Clone
 git clone git@github.com:minhopark1271/claude-ticket-skills.git ~/Projects/claude-ticket-skills
@@ -43,6 +47,33 @@ done
 # 3. 확인
 ls -la ~/.claude/skills/ | grep ticket
 ```
+
+### Windows (PowerShell, junction)
+
+Windows 의 심볼릭 링크 생성은 관리자 권한 또는 개발자 모드가 필요하다. 권한 없이 동일하게 동작하는 **디렉토리 junction** 을 사용한다 (읽기·쓰기 모두 원본에 그대로 적용됨).
+
+```powershell
+# 1. Clone
+git clone git@github.com:minhopark1271/claude-ticket-skills.git "$HOME\Projects\claude-ticket-skills"
+
+# 2. ~/.claude/skills/ 에 junction 생성
+$src = "$HOME\Projects\claude-ticket-skills"
+$dst = "$HOME\.claude\skills"
+New-Item -ItemType Directory -Force $dst | Out-Null
+foreach ($d in Get-ChildItem -Path $src -Directory -Filter "ticket-*") {
+  $link = Join-Path $dst $d.Name
+  if (Test-Path $link) { Remove-Item $link -Recurse -Force }
+  New-Item -ItemType Junction -Path $link -Target $d.FullName | Out-Null
+}
+
+# 3. 확인
+Get-ChildItem $dst | Select-Object Name, LinkType, Target | Format-Table -AutoSize
+```
+
+> 관리자 권한 또는 개발자 모드가 켜져 있다면 junction 대신 symlink 도 가능하다:
+> `New-Item -ItemType SymbolicLink -Path $link -Target $d.FullName`
+
+설치 후 스킬을 인식시키려면 Claude Code 를 재시작한다.
 
 ## 동기화
 
