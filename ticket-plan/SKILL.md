@@ -16,14 +16,16 @@ GitHub Issue 로 Claude Code 가 실행할 개발 티켓을 구조적으로 작�
    - 없으면 사용자에게 minimal 4 키 (`project.repo`, `project.default_branch`, `worktree.prefix`, `wiki.clone_path`) 작성 안내 후 중단
 3. **브랜치 override merge** (옵셔널): `git branch --show-current` 결과가 `branches.{name}` 에 있으면 해당 키만 덮어쓰기
 4. **필수 키 검증**: 4 키 모두 존재 확인. 누락 시 보고 후 중단
-5. **치환 매핑 준비** — 본문의 `${var}` 는 다음으로 치환:
+5. **계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 `gh` 명령 전에 `gh auth switch --user ${project.gh_account}` 실행 (실패 시 `gh auth login` 안내 후 중단). 없으면 현재 active 계정 사용
+6. **치환 매핑 준비** — 본문의 `${var}` 는 다음으로 치환:
    - `${project.repo}` ← config
    - `${project.default_branch}` ← config
    - `${worktree.prefix}` ← config
    - `${wiki.clone_path}` ← config
-   - `${wiki.repo_url}` ← `git@github.com:${project.repo}.wiki.git` (universal default)
+   - `${project.ssh_host}` ← config (없으면 `github.com`)
+   - `${wiki.repo_url}` ← `git@${project.ssh_host}:${project.repo}.wiki.git` (universal default)
    - `${wiki.url_prefix}` ← `https://github.com/${project.repo}/wiki/` (universal default)
-6. **자가 검증**: 본문에 매핑 불가 `${...}` 가 있으면 보고 후 중단
+7. **자가 검증**: 본문에 매핑 불가 `${...}` 가 있으면 보고 후 중단
 
 상세 스키마: `~/.claude/skills/ticket-plan/CONFIG.md`
 

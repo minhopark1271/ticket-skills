@@ -31,6 +31,9 @@ wiki:
 | `project.default_branch` | O | string | PR base, worktree base 로 사용 |
 | `worktree.prefix` | O | string | `{prefix}-{N}-{slug}` 디렉토리/브랜치 prefix |
 | `wiki.clone_path` | O | string | wiki repo 로컬 클론 경로 (main repo sibling) |
+| `project.gh_account` | X | string | (멀티 계정용) 이 repo 작업 시 활성화할 `gh` 계정명. Bootstrap 에서 `gh auth switch --user <값>` 실행. 생략 시 현재 active 계정 사용 |
+| `project.ssh_host` | X | string | (멀티 계정용) git/wiki URL 에 쓸 SSH host alias (예: `github-numereal`). 생략 시 `github.com` |
+| `project.git_email` | X | string | (멀티 계정용) 이 repo 의 로컬 커밋 author email. Bootstrap 에서 `git config user.email <값>` (로컬). 생략 시 전역 설정 사용 |
 
 ## Universal Defaults (config 에 적지 않음)
 
@@ -38,8 +41,9 @@ wiki:
 
 | 항목 | 유도/기본값 |
 |---|---|
-| `wiki.repo_url` | `git@github.com:${project.repo}.wiki.git` |
-| `wiki.url_prefix` | `https://github.com/${project.repo}/wiki/` |
+| `project.ssh_host` | `github.com` (config 에 없을 때) |
+| `wiki.repo_url` | `git@${project.ssh_host}:${project.repo}.wiki.git` (ssh_host 기본 `github.com`) |
+| `wiki.url_prefix` | `https://github.com/${project.repo}/wiki/` (웹 브라우즈 URL — 항상 `github.com`) |
 | `branch_pattern` | `{N}-{slug}` |
 | `worktree_pattern` | `${worktree.prefix}-{N}-{slug}` |
 | `pr.title_pattern` | `{N}-{Short description}` |
@@ -61,6 +65,29 @@ branches:
 
 Bootstrap 단계에서 `git branch --show-current` 가 `branches.{name}` 키와 일치하면 **선택적으로** merge.
 
+## Optional — 멀티 GitHub 계정 / SSH 호스트
+
+여러 GitHub 계정을 한 머신에서 쓰고, **repo 마다 다른 계정**으로 작업할 때 사용. config 는 repo 별 파일이므로, 각 repo 의 config 에 그 repo 가 쓰는 계정/호스트를 명시한다. 단일 계정 사용자는 **세 키 모두 생략** (기존 동작 그대로).
+
+```yaml
+project:
+  repo: numereal/some-repo
+  default_branch: main
+  gh_account: minhopark-lgtm      # gh auth switch 대상 (gh issue/pr/label 권한)
+  ssh_host: github-numereal       # ~/.ssh/config 의 Host alias (git/wiki push 키 선택)
+  git_email: minhopark@numereal.ai  # 이 repo 커밋 author (로컬)
+```
+
+**전제 조건 (1회 셋업, config 와 무관)**:
+1. `gh auth login` 으로 두 계정 모두 `gh` 에 로그인 (`gh auth status` 로 확인)
+2. `~/.ssh/config` 에 계정별 Host alias + IdentityFile 등록 (예: `Host github-numereal` → `IdentityFile ~/.ssh/id_rsa_numereal`)
+3. 해당 repo 의 `origin` remote 가 alias 를 쓰도록 클론/설정 — `git remote set-url origin git@${ssh_host}:<owner>/<repo>.git`
+
+**동작**:
+- `gh_account` 있으면 → Bootstrap 이 `gh` 명령 전에 `gh auth switch --user ${project.gh_account}` 로 활성 계정 전환 (이후 모든 `gh issue/pr/label` 이 올바른 계정 토큰 사용). `gh auth switch` 는 전역 active 계정을 바꾸는 side effect 이므로, repo 를 옮길 때마다 해당 repo 의 Bootstrap 이 다시 전환.
+- `ssh_host` 있으면 → `${wiki.repo_url}` 이 `git@${ssh_host}:...` 로 유도되어 wiki clone/push 가 올바른 SSH 키 사용. main repo 의 `git push` 는 `origin` remote URL 을 따르므로 위 전제조건 3 이 보장.
+- `git_email` 있으면 → Bootstrap 이 `git config user.email ${project.git_email}` (로컬, `--global` 아님) 로 커밋 author 를 repo 계정에 맞춤.
+
 ## 변수 치환 — `${var}` 참조 표
 
 스킬 SKILL.md 안에서 사용하는 placeholder. Bootstrap 단계에서 config 값으로 치환.
@@ -71,7 +98,10 @@ Bootstrap 단계에서 `git branch --show-current` 가 `branches.{name}` 키와 
 | `${project.default_branch}` | config | `master` |
 | `${worktree.prefix}` | config | `asdf` |
 | `${wiki.clone_path}` | config | `../asdf.wiki` |
-| `${wiki.repo_url}` | universal default | `git@github.com:minhopark1271/asdf.wiki.git` |
+| `${project.gh_account}` | config (옵셔널) | `minhopark-lgtm` |
+| `${project.ssh_host}` | config (옵셔널, 기본 `github.com`) | `github-numereal` |
+| `${project.git_email}` | config (옵셔널) | `minhopark@numereal.ai` |
+| `${wiki.repo_url}` | universal default | `git@${project.ssh_host}:minhopark1271/asdf.wiki.git` |
 | `${wiki.url_prefix}` | universal default | `https://github.com/minhopark1271/asdf/wiki/` |
 | `${project_root}` | **메타 변수** (Bootstrap 1번 결과 `git rev-parse --show-toplevel`) | `/Users/minhopark/Projects/asdf` |
 
@@ -92,7 +122,12 @@ Bootstrap 단계에서 `git branch --show-current` 가 `branches.{name}` 키와 
 4. **필수 키 검증**
    - `project.repo`, `project.default_branch`, `worktree.prefix`, `wiki.clone_path` 존재 확인
    - 누락 시 에러 보고
-5. **`${var}` 치환 self-check**
+5. **계정 라우팅** (멀티 계정 — 옵셔널)
+   - `project.gh_account` 가 있으면: `gh auth switch --user ${project.gh_account}` 실행 (이후 모든 `gh` 명령이 해당 계정 토큰 사용). 전환 실패 시 (해당 계정 미로그인 등) 보고 후 중단 — `gh auth login` 안내
+   - `project.git_email` 이 있으면: `git config user.email ${project.git_email}` (로컬). 코드 변경을 다루는 스킬에서만 필요
+   - `project.ssh_host` 는 별도 명령 없이 `${wiki.repo_url}` 유도에 반영
+   - 세 키 모두 없으면 이 단계 skip (단일 계정)
+6. **`${var}` 치환 self-check**
    - SKILL.md 본문의 모든 `${...}` 가 위 표의 키 또는 universal default 로 매핑 가능한지 확인
    - 매핑 불가 placeholder 있으면 보고 후 중단
 
@@ -148,6 +183,24 @@ wiki:
   clone_path: ../Licensing_Automation.wiki
 ```
 
+### 두 번째 계정 repo (멀티 계정)
+
+`minhopark1271` 외 `minhopark-lgtm` 계정 소속 repo. `gh_account` / `ssh_host` / `git_email` 추가.
+
+```yaml
+version: 1
+project:
+  repo: numereal/some-repo
+  default_branch: main
+  gh_account: minhopark-lgtm
+  ssh_host: github-numereal
+  git_email: minhopark@numereal.ai
+worktree:
+  prefix: someproj
+wiki:
+  clone_path: ../some-repo.wiki
+```
+
 ## Dry-run 검증
 
 ```bash
@@ -157,6 +210,10 @@ test -f .claude/ticket-skill-configs.yaml || echo "missing config"
 # 2. SKILL.md 의 ${var} 잔존이 모두 위 표에 정의되어 있는지
 grep -oE '\$\{[a-z_.]+\}' ~/.claude/skills/ticket-*/SKILL.md | sort -u
 
-# 3. project.repo 라우팅 확인
+# 3. (멀티 계정) gh_account 가 있으면 먼저 전환
+ACC=$(yq -r '.project.gh_account // ""' .claude/ticket-skill-configs.yaml)
+[ -n "$ACC" ] && gh auth switch --user "$ACC"
+
+# 4. project.repo 라우팅 확인 (전환된 계정 토큰으로 접근되는지)
 gh issue list --repo "$(yq '.project.repo' .claude/ticket-skill-configs.yaml)" --limit 1
 ```

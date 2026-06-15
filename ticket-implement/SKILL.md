@@ -9,11 +9,13 @@ GitHub Issue 의 진행 상황을 업데이트합니다. 작업 시작, 진행 �
 
 ## Bootstrap (모든 호출 시 첫 단계)
 
-`{project_root}/.claude/ticket-skill-configs.yaml` 로드 → minimal 4 키 검증 → `${var}` 치환. 상세 절차와 변수 매핑: `~/.claude/skills/ticket-plan/CONFIG.md`.
+`{project_root}/.claude/ticket-skill-configs.yaml` 로드 → minimal 4 키 검증 → **계정 라우팅** → `${var}` 치환. 상세 절차와 변수 매핑: `~/.claude/skills/ticket-plan/CONFIG.md`.
 
 핵심 치환:
 - `${project.repo}`, `${project.default_branch}`, `${worktree.prefix}`, `${wiki.clone_path}` ← config
-- `${wiki.repo_url}`, `${wiki.url_prefix}` ← universal default
+- `${wiki.repo_url}`, `${wiki.url_prefix}` ← universal default (`${wiki.repo_url}` 은 `git@${project.ssh_host}:...`, ssh_host 기본 `github.com`)
+
+**계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 `gh`/git 작업 전에 `gh auth switch --user ${project.gh_account}` 실행. `project.git_email` 이 있으면 worktree 진입 후 `git config user.email ${project.git_email}` (로컬). 없으면 현재 계정/전역 설정 사용.
 
 ## 데이터 소스
 

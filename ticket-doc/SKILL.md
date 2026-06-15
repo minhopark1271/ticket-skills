@@ -9,11 +9,13 @@ GitHub Issue 와 연동된 기술 문서를 **GitHub Wiki** 에 생성 및 관�
 
 ## Bootstrap (모든 호출 시 첫 단계)
 
-`{project_root}/.claude/ticket-skill-configs.yaml` 로드 → minimal 4 키 검증 → `${var}` 치환. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
+`{project_root}/.claude/ticket-skill-configs.yaml` 로드 → minimal 4 키 검증 → **계정 라우팅** → `${var}` 치환. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
+
+**계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 `gh` 명령 전에 `gh auth switch --user ${project.gh_account}`. `${wiki.repo_url}` 은 `git@${project.ssh_host}:${project.repo}.wiki.git` 로 유도되므로 (ssh_host 기본 `github.com`), 두 번째 계정 repo 의 wiki clone/push 가 올바른 SSH 키를 사용. 세 키 모두 없으면 단일 계정 동작.
 
 ## 데이터 소스
 
-- **Wiki repo**: `${wiki.repo_url}`
+- **Wiki repo**: `${wiki.repo_url}` (= `git@${project.ssh_host}:${project.repo}.wiki.git`)
 - **로컬 클론 경로**: `${wiki.clone_path}` (main repo 의 sibling)
 - **Wiki 는 main repo 와 별도의 git repo** — 자체 master 브랜치, 별도 commit/push
 - 페이지 = 마크다운 파일 (`.md`). 파일명이 곧 페이지 슬러그.
