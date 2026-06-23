@@ -108,6 +108,7 @@ state 가 `CLOSED` 면 사용자에게 확인 (이미 완료된 Issue 일 수 �
    gh issue comment {N} --repo "${project.repo}" --body-file /tmp/progress.md
    ```
    `/tmp/progress.md` 내용은 아래 **진행 Comment Template** 의 "작업 시작" 형식.
+4. **보드 동기화**: config 에 `board` 가 있으면 `Set-BoardStatus({N}, in_progress)` (CONFIG.md "프로젝트 보드 Status 동기화") 실행. 보드 미설정이면 skip.
 
 #### Type B: 진행 기록 (ongoing work)
 1. 관련 PR 링크 확인: `gh pr list --repo "${project.repo}" --search "head:{N}-{slug}" --state all`

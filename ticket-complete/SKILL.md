@@ -142,6 +142,9 @@ PR 머지로 Issue 가 이미 closed 상태이지만, 추가로 다음을 수행
 gh issue edit {N} --repo "${project.repo}" --remove-label "in-progress,needreview"
 ```
 
+#### 9-1b. 보드 동기화
+config 에 `board` 가 있으면 `Set-BoardStatus({N}, done)` (CONFIG.md "프로젝트 보드 Status 동기화") 실행. 코드 흐름(머지 후)·docs-only 흐름 공통. 보드 미설정이면 skip.
+
 #### 9-2. Implementation Plan 체크리스트 검증
 Issue body 에 Implementation Plan 이 있으면:
 - 모든 `- [ ]` 항목을 `- [x]` 로 변경하여 `gh issue edit {N} --repo "${project.repo}" --body-file ...` 로 본문 업데이트

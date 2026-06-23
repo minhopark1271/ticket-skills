@@ -169,6 +169,8 @@ gh issue create \
 - `--body-file` 사용 권장 (긴 본문/특수문자 안전)
 - `--repo` 명시 권장 (worktree 등 cwd 가 main repo 가 아닐 때 안전)
 
+**보드 동기화**: config 에 `board` 가 있으면 Issue 생성 직후 `Set-BoardStatus({N}, backlog)` (CONFIG.md "프로젝트 보드 Status 동기화") 실행. 복수 생성(Step 4-Multi)은 각 Issue 마다. 보드 미설정이면 skip.
+
 #### Step 4-Multi: 복수 Issue 생성
 
 1. **의존성 순서대로** 순차 생성. 앞 Issue 번호를 다음 Issue 의 `## Related` 에 `#{앞번호}` 로 참조
@@ -333,6 +335,8 @@ gh issue edit {N} --repo "${project.repo}" --body-file /tmp/issue-body-updated.m
 ```
 
 수정된 본문은 직접 변경 + 연관 변경을 **모두** 누락 없이 반영. 라벨 변경이 있으면 `--add-label` / `--remove-label` 추가.
+
+**보드 동기화**: config 에 `board` 가 있으면 리뷰 반영 완료 시점에 `Set-BoardStatus({N}, ready)` (CONFIG.md) 실행. 보드 미설정이면 skip.
 
 4. **재리뷰 여부 확인**:
 - "다시 리뷰할까요?"

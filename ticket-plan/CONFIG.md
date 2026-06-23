@@ -88,6 +88,76 @@ project:
 - `ssh_host` 있으면 → `${wiki.repo_url}` 이 `git@${ssh_host}:...` 로 유도되어 wiki clone/push 가 올바른 SSH 키 사용. main repo 의 `git push` 는 `origin` remote URL 을 따르므로 위 전제조건 3 이 보장.
 - `git_email` 있으면 → Bootstrap 이 `git config user.email ${project.git_email}` (로컬, `--global` 아님) 로 커밋 author 를 repo 계정에 맞춤.
 
+## Optional — GitHub Projects 보드 (Status 동기화)
+
+이슈가 GitHub Projects v2 보드에 올라가 있고, **ticket-* 생명주기 단계에 따라 카드의 Status(레인)를 자동 이동**시키고 싶을 때 사용. 없으면 모든 보드 동기화를 건너뛴다(보드 미사용 프로젝트 무영향).
+
+config 에 적는 건 **`owner` + `number` 두 줄만**. 나머지(`project_id`·`status_field_id`·`status_options`)는 첫 보드 동기화 때 `Set-BoardStatus` 가 자동 해석·캐시한다(아래 "Board 좌표 lazy 해석"). 보드별 값은 **프로젝트 config** 에, 해석 로직은 **global 스킬(본 문서)** 에 둔다.
+
+```yaml
+board:
+  owner: <org-or-user>      # 프로젝트 소유 org/user (예: NohLabWorks) — 수기 필수
+  number: <project-number>  # 프로젝트 번호 (URL .../projects/<number>) — 수기 필수
+  # ↓ 첫 호출 시 자동 해석·캐시(수기 작성 불요). 보드 재생성으로 ID 가 바뀌면 지우면 재해석.
+  # project_id: <PVT_...>
+  # status_field_id: <PVTSSF_...>
+  # status_options: { backlog, ready, in_progress, in_review, done → 옵션 id }
+```
+
+| 키 | 작성 | 설명 |
+|---|---|---|
+| `board.owner` / `board.number` | **수기 필수**(보드 사용 시) | `gh project` 프로젝트 지정 |
+| `board.project_id` | 자동 캐시 | `item-edit` 의 `--project-id` |
+| `board.status_field_id` | 자동 캐시 | Status 단일선택 필드 id |
+| `board.status_options.<key>` | 자동 캐시 | 논리키(backlog/ready/in_progress/in_review/done) → 옵션 id |
+
+### 생명주기 → Status 매핑 (스킬 직접 구동)
+
+라벨이 아니라 **스킬 단계**가 레인을 움직인다(GitHub 기본 워크플로엔 "라벨 트리거" 가 없고, 초안/리뷰완료는 라벨로 구분 불가하기 때문). 각 스킬이 해당 시점에 아래 `Set-BoardStatus` 를 호출:
+
+| 스킬 / 시점 | status_key |
+|---|---|
+| `ticket-plan` Issue 생성 직후 | `backlog` |
+| `ticket-plan` 리뷰(R4~R5) 반영 완료 | `ready` |
+| `ticket-implement` 작업 시작(Type A) | `in_progress` |
+| `ticket-review` 검토 시작 | `in_review` |
+| `ticket-complete` 머지/완료 처리 | `done` |
+
+### Set-BoardStatus(N, status_key) 절차
+
+0. `config.board` 없으면 **즉시 종료**(보드 미설정 — skip).
+0b. `board.project_id` / `status_field_id` / `status_options` 중 하나라도 누락 → **Board 좌표 lazy 해석**(아래)을 먼저 수행해 config 에 캐시한 뒤 진행.
+1. 보드 내 item id 조회:
+   ```bash
+   gh project item-list ${board.number} --owner ${board.owner} --format json --limit 300 \
+     --jq ".items[] | select(.content.number==N and .content.repository==\"${project.repo}\") | .id"
+   ```
+   - 결과가 비어 있으면(보드 미등록) 추가 후 그 id 사용:
+     ```bash
+     gh project item-add ${board.number} --owner ${board.owner} \
+       --url https://github.com/${project.repo}/issues/N --format json --jq .id
+     ```
+2. Status 설정:
+   ```bash
+   gh project item-edit --id <item_id> --project-id ${board.project_id} \
+     --field-id ${board.status_field_id} --single-select-option-id <status_options[status_key]>
+   ```
+3. 실패(토큰 `project` 스코프 부족 등)는 **경고만 남기고 본 작업을 막지 않는다** — 보드 동기화는 보조 기능.
+
+> 전제: `gh` 토큰에 `project` 스코프 필요 (`gh auth refresh -s project`). 멀티 계정이면 라우팅된 계정 토큰 기준.
+
+### Board 좌표 lazy 해석 (1회 자동 캐시)
+
+`board.owner` + `number` 만 있고 ID 가 미캐시일 때, `Set-BoardStatus` 가 처음 호출되는 스킬(보통 ticket-plan)에서 1회 수행:
+
+1. `project_id` ← `gh project view ${board.number} --owner ${board.owner} --format json --jq .id`
+2. Status 필드/옵션 ← `gh project field-list ${board.number} --owner ${board.owner} --format json` 에서
+   `type=="ProjectV2SingleSelectField"` 이고 `name=="Status"` 인 필드의 `id`(= status_field_id)와 `options[]`(name→id).
+3. 레인명 → 논리키 매핑(대소문자·공백 무시): `Backlog→backlog`, `Ready→ready`, `In progress→in_progress`, `In review→in_review`, `Done→done`. 매칭 안 되는 레인명이 있으면 그 키는 비워두고 사용자에게 보고(비표준 레인명 프로젝트).
+4. 위 값을 **프로젝트 config**(`.claude/ticket-skill-configs.yaml`)의 `board` 블록에 Edit 로 써넣어 캐시. 이후 호출은 캐시 사용(재해석 X).
+
+> 일반화된 해석 로직은 global 스킬(본 CONFIG.md)에 있고, 해석 결과(프로젝트별 값)는 프로젝트 config 에 캐시된다.
+
 ## 변수 치환 — `${var}` 참조 표
 
 스킬 SKILL.md 안에서 사용하는 placeholder. Bootstrap 단계에서 config 값으로 치환.
@@ -137,9 +207,9 @@ project:
 
 | 스킬 | Lazy 액션 |
 |---|---|
-| `ticket-plan` | `gh label create --force` 로 universal 라벨 12개 보장 (이미 있으면 no-op) |
+| `ticket-plan` | `gh label create --force` 로 universal 라벨 12개 보장 (이미 있으면 no-op) + (`board` 있으면) 첫 `Set-BoardStatus` 호출 시 board 좌표 lazy 해석·캐시 (위 "Board 좌표 lazy 해석") |
 | `ticket-doc` | `${wiki.clone_path}` 디렉토리 없으면 `git clone ${wiki.repo_url} ${wiki.clone_path}` |
-| 그 외 | 별도 lazy 액션 없음 |
+| 그 외 | board 좌표가 미캐시면 `Set-BoardStatus` 가 첫 호출 시 lazy 해석 (진입점이 ticket-plan 이 아니어도 동작) |
 
 ## 확장 정책 — "한 항목씩 추가"
 
