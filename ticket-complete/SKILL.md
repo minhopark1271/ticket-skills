@@ -6,7 +6,7 @@ description: GitHub Issue 를 end-to-end 로 마무리합니다. 커밋, 푸시,
 # Ticket Complete
 
 GitHub Issue 구현 완료 후 전체 마무리 프로세스를 한 번에 실행합니다.
-커밋 → PR 생성 (Closes #N) → PR 머지 → worktree/브랜치 정리 → 구현 결과 comment → Issue 라벨 정리 (PR 머지로 자동 close) → wiki sync.
+커밋 → PR 생성 (Closes #N) → PR 머지 → worktree/브랜치 정리 → 구현 결과 comment → Issue 라벨 정리 (PR 머지로 자동 close) → wiki 발행(push).
 
 ## Bootstrap (모든 호출 시 첫 단계)
 
@@ -18,7 +18,7 @@ GitHub Issue 구현 완료 후 전체 마무리 프로세스를 한 번에 실�
 
 - **티켓**: GitHub Issues (`${project.repo}`)
 - **PR ↔ Issue 연동**: PR body 의 `Closes #{N}` 으로 머지 시 Issue 자동 close
-- **Wiki**: ticket-doc 가 추가한 wiki 페이지가 있으면 push 필요
+- **Wiki**: ticket-doc 가 드래프트(로컬 커밋)로 남긴 wiki 페이지를 이 스킬이 **발행(push)** — 자동 파이프라인의 유일한 발행 지점
 
 ## 사용 시점
 - Issue 구현이 끝나고 모든 acceptance criteria 가 통과된 후
@@ -32,7 +32,7 @@ GitHub Issue 구현 완료 후 전체 마무리 프로세스를 한 번에 실�
 ## 변경 유형
 
 - **코드 변경 + 머지 흐름 (기본)**: Step 1~11 전체 수행
-- **Docs-only 변경** (글로벌 스킬, 외부 문서 등 worktree·PR 불필요): Step 1 의 Issue 확인 후 **Step 2~8 스킵**. Step 9 (라벨 정리 / 체크리스트 / 구현 결과 comment / close), Step 10 (wiki 동기화) 만 수행. PR/머지가 없으므로 Issue 자동 close 도 발생하지 않음 → Step 9 에서 `gh issue close {N}` 를 명시적으로 호출
+- **Docs-only 변경** (글로벌 스킬, 외부 문서 등 worktree·PR 불필요): Step 1 의 Issue 확인 후 **Step 2~8 스킵**. Step 9 (라벨 정리 / 체크리스트 / 구현 결과 comment / close), Step 10 (wiki 발행) 만 수행. PR/머지가 없으므로 Issue 자동 close 도 발생하지 않음 → Step 9 에서 `gh issue close {N}` 를 명시적으로 호출
 
 ## 사용 절차
 
@@ -192,19 +192,21 @@ gh issue comment {N} --repo "${project.repo}" --body-file /tmp/results.md
 - 사용자가 응답하지 않거나 모호하면 모두 `skip` 처리.
 - **다른 Issue 를 스캔하거나, 자동으로 라벨/comment 를 추가하지 않습니다.**
 
-### Step 10: Wiki 동기화 (해당 시)
+### Step 10: Wiki 발행 (해당 시)
 
-구현 중 `ticket-doc` 으로 wiki 페이지를 추가/수정했다면 wiki repo 를 push:
+구현/계획 중 `ticket-doc` 이 남긴 wiki **드래프트**(로컬 커밋)를 여기서 **발행(push)** 합니다 — 자동 파이프라인의 유일한 발행 지점:
 
 ```bash
 cd ${wiki.clone_path}
 git status
-# 미커밋이면 commit + push
-git add . && git commit -m "docs: #{N} - {요약}" && git push
+# 드래프트가 로컬 커밋으로 쌓여 있음 → push 로 발행
+# (혹시 미커밋 변경이 남아 있으면 함께 커밋)
+git add . && git diff --cached --quiet || git commit -m "docs: #{N} - {요약}"
+git push
 cd -
 ```
 
-wiki 변경이 없으면 스킵.
+발행할 드래프트(로컬 미push 커밋)도, 미커밋 변경도 없으면 스킵.
 
 ### Step 11: 최종 확인
 
@@ -224,7 +226,7 @@ Issue #{N} 완료:
 - 브랜치 정리 완료 (local + remote)
 - 구현 결과 comment 추가 완료
 - Follow-up: {새 Issue N건 생성: #X, #Y / 기록만 / 없음}
-- Wiki: {N개 페이지 push 완료 / 변경 없음}
+- Wiki: {N개 드래프트 발행(push) 완료 / 발행할 드래프트 없음}
 ```
 
 ## 오류 처리

@@ -18,6 +18,7 @@ GitHub Issue 와 연동된 기술 문서를 **GitHub Wiki** 에 생성 및 관�
 - **Wiki repo**: `${wiki.repo_url}` (= `git@${project.ssh_host}:${project.repo}.wiki.git`)
 - **로컬 클론 경로**: `${wiki.clone_path}` (main repo 의 sibling)
 - **Wiki 는 main repo 와 별도의 git repo** — 자체 master 브랜치, 별도 commit/push
+- **드래프트 → 발행 2단계**: 문서 작성 = 로컬 커밋(드래프트)까지만. 발행(push)은 명시적 단계 (Step 6) 에서만
 - 페이지 = 마크다운 파일 (`.md`). 파일명이 곧 페이지 슬러그.
 
 ## 지연 초기화 — Wiki 클론 (첫 호출 시)
@@ -181,19 +182,39 @@ gh issue comment {N} --repo "${project.repo}" --body "관련 문서 추가: [Web
 - [ ] 같은 Issue 의 기존 wiki 페이지에 새 문서 링크 추가됨 (기존 문서 있는 경우)
 - [ ] 새 문서에 기존 wiki 페이지 링크 포함됨 (기존 문서 있는 경우)
 
-### Step 5: Wiki commit & push
+### Step 5: Wiki 로컬 commit — 드래프트 (push 안 함)
+
+문서는 **로컬 `.wiki` 클론에 commit 까지만** 하고 **push 하지 않습니다** (= 드래프트). 발행(push)은 Step 6 에서 명시적으로만 일어납니다.
 
 ```bash
 cd ${wiki.clone_path}
 git add {N}-{seq}-{title-kebab}.md
-git commit -m "docs: #{N} - {문서 제목 요약}"
-git push
+git commit -m "docs: #{N} - {문서 제목 요약}"   # 로컬 커밋만 — push X
 cd -
 ```
 
-**자동 모드**: ticket-plan/ticket-implement 가 호출 후 wiki push 까지 일괄 처리하면 이 단계는 호출자에게 위임 가능. 단, ticket-implement 자동 파이프라인 도중에 호출됐다면 즉시 push (이후 ticket-complete 까지 누락되면 안 됨).
+**모든 모드 공통**: 이 스킬은 **절대 자동으로 push 하지 않습니다.** 자동(ticket-plan/ticket-implement)·독립 모드 모두 드래프트(로컬 커밋)에서 멈춥니다.
 
-**독립 모드**: 이 스킬이 최종 호출자이므로 직접 push.
+### Step 6: 발행 — 명시적 push (드래프트 → 공개)
+
+로컬 드래프트를 GitHub Wiki 에 실제 공개하는 단계. **명시적 트리거로만** 실행합니다.
+
+| 트리거 | 발행 주체 |
+|---|---|
+| 자동 파이프라인 (ticket-plan → implement → complete) | **ticket-complete 의 "Wiki 발행" 단계**가 누적 드래프트를 일괄 push |
+| 독립 `/ticket-doc` | 사용자가 **발행을 명시적으로 요청**("발행" / "publish" / "push")할 때만 |
+
+```bash
+cd ${wiki.clone_path}
+git push        # 여기서 비로소 공개
+cd -
+```
+
+**독립 모드 종료 보고** (드래프트만 하고 멈춤 — 발행 여부는 사용자가 결정):
+```
+로컬 드래프트 저장됨: {N}-{seq}-{title-kebab}.md (아직 미발행)
+발행하려면: (cd ${wiki.clone_path} && git push)  또는 "발행" 이라고 요청하세요.
+```
 
 ## 템플릿
 
@@ -390,4 +411,4 @@ cd -
 - **독립 모드**: 반드시 기존 Issue 와 연동 (Issue 없는 독립 문서는 대상 X)
 - 독립 모드로 브레인스토밍 문서 작성 후, 실행할 아이디어가 나오면 `ticket-plan` 으로 새 Issue 생성 권유
 - **Type B 의 후속 작업**: 단순 리스트로만 — 다른 Issue 를 자동 수정하거나 라벨/comment 를 추가하지 않습니다 (정보량 폭증 방지)
-- Wiki repo 는 main repo 와 별도 — push 잊지 말기
+- Wiki repo 는 main repo 와 별도 — **자동 push 안 함**. 발행은 명시적 단계(Step 6)에서만 (드래프트 → 발행 분리)

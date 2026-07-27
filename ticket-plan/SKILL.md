@@ -241,9 +241,9 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 - Step 2.5 의 `## Design` 상세 (대안 표·자료구조·hierarchy·시그니처) 가 Issue body 1 화면 분량을 초과하는 경우 — Issue body 의 `## Design` 에는 요약 + 선택 근거 + 핵심 시그니처만 남기고, 풀 설계는 wiki 에 위임
 
 **실행 순서**:
-1. `ticket-doc` Type A 호출 → GitHub Wiki 에 페이지 생성
+1. `ticket-doc` Type A 호출 → GitHub Wiki 페이지 **드래프트** 생성 (로컬 커밋만; **push 안 함**)
 2. 페이지명: `{issue-number}-{seq}-{analysis-title}` (예: `115-1-websocket-flow-analysis`)
-3. 생성된 wiki 페이지 URL 을 Issue body 의 `## Related` 섹션에 추가
+3. 생성된 wiki 페이지 URL 을 Issue body 의 `## Related` 섹션에 추가 (URL 은 파일명 기반이라 발행 전에도 확정 — 실제 발행은 `ticket-complete` 에서)
 
 **해당 없으면** 스킵. Background/Technical Details 에 충분히 담긴 경우 별도 wiki 페이지 불필요.
 
