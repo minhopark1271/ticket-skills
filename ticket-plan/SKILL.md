@@ -12,8 +12,7 @@ GitHub Issue 로 Claude Code 가 실행할 개발 티켓을 구조적으로 작�
 이 스킬은 `{project_root}/.claude/ticket-skill-configs.yaml` 의 설정을 읽어 동작합니다. 첫 호출 시 다음 절차를 수행:
 
 1. **프로젝트 루트 감지**: `git rev-parse --show-toplevel` (실패 시 cwd)
-2. **Config 로드**: `${project_root}/.claude/ticket-skill-configs.yaml`
-   - 없으면 사용자에게 minimal 4 키 (`project.repo`, `project.default_branch`, `worktree.prefix`, `wiki.clone_path`) 작성 안내 후 중단
+2. **Config 로드 + 로컬 override 병합**: 공유 `${project_root}/.claude/ticket-skill-configs.yaml` (없으면 minimal 4 키 (`project.repo`, `project.default_branch`, `worktree.prefix`, `wiki.clone_path`) 작성 안내 후 중단) → 로컬 `ticket-skill-configs.local.yaml` 있으면 deep merge (로컬 우선; 개인 gh 계정·SSH·이메일 키). 없으면 skip
 3. **브랜치 override merge** (옵셔널): `git branch --show-current` 결과가 `branches.{name}` 에 있으면 해당 키만 덮어쓰기
 4. **필수 키 검증**: 4 키 모두 존재 확인. 누락 시 보고 후 중단
 5. **계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 `gh` 명령 전에 `gh auth switch --user ${project.gh_account}` 실행 (실패 시 `gh auth login` 안내 후 중단). 없으면 현재 active 계정 사용

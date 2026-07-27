@@ -10,7 +10,7 @@ GitHub Issue 구현 완료 후 전체 마무리 프로세스를 한 번에 실�
 
 ## Bootstrap (모든 호출 시 첫 단계)
 
-`{project_root}/.claude/ticket-skill-configs.yaml` 로드 → minimal 4 키 검증 → **계정 라우팅** → `${var}` 치환. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
+`{project_root}/.claude/ticket-skill-configs.yaml` (+ 로컬 `ticket-skill-configs.local.yaml` override, 있으면) 로드·병합 → minimal 4 키 검증 → **계정 라우팅** → `${var}` 치환. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
 
 **계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 PR/커밋/push 전에 `gh auth switch --user ${project.gh_account}` 실행. `project.git_email` 이 있으면 커밋 전 `git config user.email ${project.git_email}` (로컬). `${wiki.repo_url}` 은 `git@${project.ssh_host}:...` 로 유도 (ssh_host 기본 `github.com`) — wiki push 가 올바른 SSH 키 사용. main repo push 는 `origin` remote URL 을 따름. 세 키 모두 없으면 단일 계정 동작.
 
