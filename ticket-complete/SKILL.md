@@ -117,12 +117,21 @@ git pull
 
 ### Step 7: Worktree 정리
 
-```bash
-git worktree remove ../${worktree.prefix}-{N}-{slug}
+**`git worktree remove` 전에 worktree 안의 symlink / junction 을 먼저 제거한다.** 링크가 남아 있으면 삭제가 링크를 타고 들어가 원본 데이터를 지운다.
+
+```powershell
+$wt = "../${worktree.prefix}-{N}-{slug}"
+$links = Get-ChildItem $wt -Recurse -Force -Attributes ReparsePoint
+$targets = $links.Target                                    # 삭제 전에 타깃 기록
+$links | ForEach-Object { $_.Delete() }                     # 링크 자체만 삭제 (비재귀)
+Get-ChildItem $wt -Recurse -Force -Attributes ReparsePoint  # 잔존 0 확인 (남으면 중단)
+git worktree remove $wt
+$targets | ForEach-Object { Test-Path $_ }                  # 원본 보존 확인 (전부 True)
 ```
 
+- POSIX 환경: `find "$wt" -type l -delete`
 - 실패 시 (미커밋 변경 등) 사용자 보고 후 `--force` 옵션 사용 여부 확인
-- **`rm -rf` 금지** — symlink 가 있을 경우 원본 파일이 삭제될 수 있음
+- **`rm -rf` / `Remove-Item -Recurse` 금지** — 링크를 타고 원본이 삭제됨
 
 ### Step 8: 브랜치 정리
 
@@ -240,7 +249,7 @@ Issue #{N} 완료:
 ## 주요 참고 사항
 
 - **Base 브랜치**: `${project.default_branch}`
-- **Symlink 주의**: worktree 내 symlink 존재 가능. `rm -rf` 금지, `git worktree remove` 만 사용
+- **링크/junction 주의**: worktree 정리는 링크 제거 후 `git worktree remove` (Step 7). `rm -rf` / `Remove-Item -Recurse` 금지
 - **PR body 의 `Closes #{N}` 필수**: 누락 시 Issue 가 자동으로 close 되지 않음
 - **후속 작업 처리**: 사용자가 `new` 로 명시한 항목만 새 Issue. 다른 Issue 자동 수정·전파 금지
 - **Wiki 와 main repo 는 별도 git repo**: wiki 변경은 `${wiki.clone_path}` 에서 별도로 commit/push
