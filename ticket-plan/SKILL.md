@@ -381,6 +381,8 @@ Issue body 는 **필수 4 섹션 + 옵셔널 4 섹션** 구조. 옵셔널은 필
 **필수**: Original Request / Goal / Background / Technical Details
 **옵셔널**: Design (Step 2.5 트리거 시 필수) / Implementation Plan / Acceptance Criteria / Related
 
+**Technical Details 는 `as-is` / `to-be` / `not-to-be` 3 파트**. 현재 상태와 변경 방향이 한 목록에 섞이면 불릿마다 시점이 바뀌어 무엇이 사실이고 무엇이 결정인지 구분되지 않습니다. 내용 없는 파트는 소절째 생략 (신규 코드면 `as-is` 생략). 3 파트에 담기지 않는 내용만 다른 포맷 (표 · 코드 블록) 또는 규칙 없는 나열 — 예: 원인 미확정 조사 티켓, 계약 변경이 아닌 설정 · 의존성 목록.
+
 ```markdown
 ## Original Request
 > {사용자가 입력한 원래 프롬프트를 그대로 인용}
@@ -392,7 +394,15 @@ Issue body 는 **필수 4 섹션 + 옵셔널 4 섹션** 구조. 옵셔널은 필
 {왜 필요한가? 컨텍스트와 동기}
 
 ## Technical Details
-{기술적 고려사항, 제약, 접근 방법}
+
+### as-is
+{건드릴 코드의 현재 계약 · 구조. 결정을 읽는 데 필요한 사실만}
+
+### to-be
+{본 티켓이 바꾸는 것. 계약 · 규칙 단위}
+
+### not-to-be
+{바꾸지 않는 것 — 범위 경계, 타 Issue 소유, 의도적 미수정, 후속 후보}
 
 <!-- ── 이하 옵셔널: 필요한 경우만 ── -->
 
@@ -488,9 +498,16 @@ def core_op(x: T, *, opt: U = DEFAULT, retries: int = 3) -> R:
 현재 30초 폴링 방식으로 가격을 가져온다. UX 개선을 위해 실시간 푸시로 전환.
 
 ## Technical Details
-- `websockets` 라이브러리 사용
-- Binance WebSocket API 가격 스트림 구독
-- 연결 끊김 시 자동 재연결 (exponential backoff)
+
+### as-is
+- `PriceFetcher.poll()` 이 30 초 주기 REST 폴링, 대시보드는 폴링 결과를 렌더
+
+### to-be
+- `websockets` 라이브러리로 Binance WebSocket 가격 스트림 구독
+- 연결 끊김 시 exponential backoff 자동 재연결
+
+### not-to-be
+- REST 폴링 경로는 WebSocket 미지원 환경 fallback 으로 유지 — 제거는 별건
 
 ## Implementation Plan
 - [ ] **Phase 1: WebSocket 클라이언트 구현**
@@ -522,6 +539,8 @@ LSTM 학습이 200 epoch 이상 진행되어도 메모리가 안정 유지되도
 - 검증: `tracemalloc` 으로 200 epoch 메모리 추세 측정
 ```
 
+**3 파트 미적용 사례**: 원인이 미확정이라 `as-is` (무엇이 사실인가) 와 `to-be` (무엇을 바꾸는가) 가 아직 갈리지 않음. 조사 결과가 나오면 3 파트로 재작성.
+
 ## PR 컨벤션
 
 PR 생성 형식은 `ticket-complete` Step 4 참조. 핵심:
@@ -531,6 +550,7 @@ PR 생성 형식은 `ticket-complete` Step 4 참조. 핵심:
 ## 권장 사항
 
 - Goal 은 결과 (outcome) 를 기술하지 활동 (activity) 을 적지 않습니다
+- Technical Details 는 as-is / to-be / not-to-be 3 파트 기본. 미적용은 3 파트가 성립하지 않을 때만
 - Implementation Plan Phase 는 작고 체크 가능한 단위
 - Related 에 코드 파일 경로 + Issue/Wiki 링크 혼재 허용
 - 옵셔널 섹션은 필요할 때만, 빈 섹션 금지
