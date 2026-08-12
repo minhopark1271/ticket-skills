@@ -123,6 +123,7 @@ state 가 `CLOSED` 면 사용자에게 확인 (이미 완료된 Issue 일 수 �
    - 다음 단계
    - PR 링크 (있으면)
    - 후속 작업 (현재 Issue 범위 밖에서 발견한 항목 — 있을 때만)
+   - 최하단 세션 서명 footer
 4. **문서화 (선택)**: 진행 중 발견한 중요한 기술적 인사이트, 실험 결과, 또는 분석 데이터가 comment 에 담기엔 상세하면 `ticket-doc` Type B 자동 호출 → wiki 페이지 **드래프트** 생성(로컬 커밋만; **push 안 함** — 발행은 `ticket-complete`) 후 comment 에서 wiki URL 참조
 
 #### Type C: 완료 (in-progress → completed)
@@ -140,7 +141,7 @@ state 가 `CLOSED` 면 사용자에게 확인 (이미 완료된 Issue 일 수 �
 gh issue edit {N} --repo "${project.repo}" --remove-label "in-progress" --add-label "needreview"
 gh issue comment {N} --repo "${project.repo}" --body "..."
 ```
-comment 본문에 구현 요약 (커밋 목록, 변경 파일, 테스트 결과, PR 링크) 포함.
+comment 본문에 구현 요약 (커밋 목록, 변경 파일, 테스트 결과, PR 링크) + 세션 서명 footer 포함.
 
 #### Type E: 보류 처리 (planned → backlog)
 ```bash
@@ -172,7 +173,12 @@ gh issue edit {N} --repo "${project.repo}" --add-label "backlog"
 
 **다음 단계**:
 - {남은 작업}
+
+---
+<sub>ticket-implement · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`</sub>
 ```
+
+마지막 두 줄 = **세션 서명 footer**, 모든 comment 필수. 명령: `~/.claude/skills/ticket-plan/STYLE.md` "History · 세션 서명".
 
 ## 구현 결과 Comment Template (완료 시)
 
@@ -200,6 +206,9 @@ gh issue edit {N} --repo "${project.repo}" --add-label "backlog"
 
 ### Completed
 {YYYY-MM-DD}
+
+---
+<sub>ticket-complete · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`</sub>
 ```
 
 ## 예시
@@ -254,6 +263,7 @@ Issue 범위 밖에서 발견한 사항은 **현재 Issue 를 오염시키지 �
 - 작업 시작 시 반드시 `in-progress` 라벨 추가
 - 의미 있는 진행이 있을 때마다 진행 comment 추가 (커밋 단위와 비슷한 빈도)
 - 블로커 발생 시 즉시 comment 로 기록하여 컨텍스트 보존
+- 모든 comment 최하단에 세션 서명 footer
 - 완료 시 구현 결과 comment 로 전체 변경 사항 요약 (ticket-complete 가 추가)
-- 원본 Issue body 는 그대로 유지 (수정이 필요하면 `gh issue edit`)
+- 원본 Issue body 는 그대로 유지 (수정 시 `gh issue edit` + `## History` 에 `edited` 한 줄)
 - 후속 작업은 **현재 Issue 에 comment 로 기록만** — 다른 Issue 자동 수정 금지

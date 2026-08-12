@@ -87,6 +87,9 @@ Closes #{N}
 - [x] {테스트 항목}
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+---
+<sub>ticket-complete · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`</sub>
 EOF
 )"
 ```
@@ -95,6 +98,7 @@ EOF
 - `--base ${project.default_branch}`
 - 본문에 `Closes #{N}` 한 줄 — 머지 시 Issue 자동 close
 - PR 제목: `{N}-{Short description}`
+- 최하단 세션 서명 footer (머신 · 세션 ID) — `~/.claude/skills/ticket-plan/STYLE.md` "History · 세션 서명"
 
 ### Step 5: PR 머지
 
@@ -159,6 +163,7 @@ Issue body 에 Implementation Plan 이 있으면:
 - 모든 `- [ ]` 항목을 `- [x]` 로 변경하여 `gh issue edit {N} --repo "${project.repo}" --body-file ...` 로 본문 업데이트
 - 실제 구현되지 않은 항목은 `(스킵: {사유})` 표기 후 체크
 - Acceptance Criteria 도 동일하게 처리
+- `## History` 에 `edited` 한 줄 (스킬 = `ticket-complete`)
 
 #### 9-3. 구현 결과 comment 추가
 
@@ -173,6 +178,7 @@ gh issue comment {N} --repo "${project.repo}" --body-file /tmp/results.md
 - Notes / Issues
 - Follow-up (있으면)
 - Completed (오늘 날짜)
+- 세션 서명 footer
 
 #### 9-4. 진행 comment 의 후속 작업 종합
 

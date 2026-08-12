@@ -3,8 +3,6 @@
 `ticket-plan` · `ticket-implement` · `ticket-complete` · `ticket-doc` 가 생성하는
 산출물 (Issue body, Issue comment, PR body, Wiki 페이지) 의 공통 작성 원칙.
 
-> Status: **draft** — 검토 진행 중
-
 ## 원칙
 
 1. **최소 + 충분** — 정보 전달에 필요한 만큼만. 미사여구 · 강조 · 연결 표현 제거
@@ -28,3 +26,53 @@
 | "구조적 일관성", "프로세스 최적화", "통합 추상화 계층" 류 가짜 용어 | 실재 이름 (예: `validate_input() 의 분기 정리`, `A·B 처리를 합친 함수`) |
 | 라벨 + 본문에 동일 정보 (`priority:high` + "긴급함") | 라벨만 |
 | "성공적으로 ~ 완료되었습니다" | "완료" |
+
+## History · 세션 서명
+
+모든 산출물에 **머신 · 세션 ID** 를 남겨 나중에 transcript 로 되짚기 위한 기록. GitHub 은 작성자 · 시각만 자동 기록한다.
+
+### Issue body · Wiki 페이지 — `## History` 누적
+
+계속 고쳐지는 문서라 매 편집이 기록 대상.
+
+```markdown
+## History
+
+- `2026-08-12T14:32+09:00` · created · ticket-plan · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`
+- `2026-08-12T15:10+09:00` · edited · ticket-doc · MinhoWindowPC · `df10f8c9-7204-4eca-86aa-d8fe0a0b0fa4`
+```
+
+필드 `시각 · 행위 · 스킬 · 머신 · 세션 ID`. 행위는 `created` (최초) / `edited` (이후 전부).
+
+```bash
+printf -- '- `%s` · %s · %s · %s · `%s`\n' \
+  "$(date +%Y-%m-%dT%H:%M%:z)" edited ticket-doc "$(hostname)" "${CLAUDE_CODE_SESSION_ID:?}"
+```
+
+- **내용이 바뀌는 시점마다 한 줄** — Issue 는 `gh issue edit --body-file` 로 쓸 때, Wiki 는 파일을 고쳐 commit 하기 전
+- Wiki push (발행) 는 내용 변경이 아님 — 줄 추가 안 함
+- 기존 줄 보존, **아래에 append**. 수정 · 삭제 금지
+
+### Issue comment · PR body — 한 줄 footer
+
+1회성 발화라 누적될 이력이 없다. 필드 `스킬 · 머신 · 세션 ID` — 시각 · 작성자는 GitHub 이 붙이므로 뺀다.
+
+```markdown
+---
+<sub>ticket-implement · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`</sub>
+```
+
+```bash
+printf -- '\n---\n<sub>%s · %s · `%s`</sub>\n' \
+  ticket-implement "$(hostname)" "${CLAUDE_CODE_SESSION_ID:?}"
+```
+
+- PR body 는 기존 `🤖 Generated with [Claude Code]` 줄 **아래**
+- 나중에 고쳐 세션이 달라지면 교체하지 말고 아래에 한 줄 추가
+
+### 공통
+
+- **세션 ID 는 full UUID** — `claude --resume {uuid}` 로 그 세션을 복원할 수 있는 유일한 형태. 축약 금지
+- `CLAUDE_CODE_SESSION_ID` 미설정 시 **중단 · 보고**. 대체값 (`unknown` 등) 금지 — env 이름 변경을 즉시 인지해야 함
+- 머신은 양쪽 셸 모두 `hostname` (`$env:COMPUTERNAME` 은 전 대문자라 어긋남). PowerShell 시각은 `Get-Date -Format "yyyy-MM-ddTHH:mmzzz"`
+- Issue 브리핑 · 요약 시 History · footer 는 발췌 제외 (기계 기록)
