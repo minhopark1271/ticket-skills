@@ -138,7 +138,7 @@ git clone ${wiki.repo_url} ${wiki.clone_path}
 3. **구조화**: 표, 코드 블록, 다이어그램 적극 활용
 4. **데이터 보존**: 수치, 파라미터, 설정값 등 재현에 필요한 정보 모두 포함
 5. 파일 저장 위치: `${wiki.clone_path}/{N}-{seq}-{title-kebab}.md`
-6. **History**: 페이지 최하단 `## History` 에 `created` 한 줄. 기존 페이지 수정이면 기존 줄 보존 + `edited` 한 줄. 포맷 · 명령: `~/.claude/skills/ticket-plan/STYLE.md` "History · 세션 서명"
+6. **History**: 페이지 최하단 `## History` 에 `created` 한 줄. 기존 페이지 수정이면 기존 줄 보존 + `edited` 한 줄. **세션 ID 뒤 변경 서술 금지** — 남길 때도 명사구 3개 이하. 포맷 · 명령: `~/.claude/skills/ticket-plan/STYLE.md` "History · 세션 서명"
 
 ### Step 4: 상호 참조 링크 (필수 — 빠짐없이 실행)
 

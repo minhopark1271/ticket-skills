@@ -471,7 +471,7 @@ def core_op(x: T, *, opt: U = DEFAULT, retries: int = 3) -> R:
 - `2026-08-12T14:32+09:00` · created · ticket-plan · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`
 ```
 
-History 는 생성 시 `created` 한 줄, 이후 body 를 고칠 때마다 `edited` 한 줄 append. 상세: `STYLE.md`.
+History 는 생성 시 `created` 한 줄, 이후 body 를 고칠 때마다 `edited` 한 줄 append. 세션 ID 뒤 변경 서술 금지 (남길 때도 명사구 3개 이하). 상세: `STYLE.md`.
 
 **상호 링크 규칙**:
 - Issue → Issue: `#123` (자동 링크)
