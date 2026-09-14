@@ -96,6 +96,8 @@ pr:
 
 **`pr.merge_method: merge` 를 쓰는 경우** — "티켓 1개 = 커밋 1개" 를 전제로 PR 을 쪼갠 프로젝트. squash 는 그 전제를 깨서 bisect 와 부분 revert 가 커밋 수준에서 죽는다.
 
+이 값이 `merge` 면 **커밋 분할도 스킬 동작이 된다** — ticket-implement 가 Implementation Plan Phase 마다 커밋 1개를 남기고(Phase 6.7), ticket-complete 는 커밋을 새로 만들지 않는다(Step 2).
+
 ## Optional — Branch Override
 
 특정 브랜치에 대해서만 minimal 키를 덮어쓸 때 사용. 보통 비워둠.

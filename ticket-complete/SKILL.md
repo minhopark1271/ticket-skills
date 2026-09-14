@@ -68,6 +68,11 @@ git status -u
    ```
 3. 이미 커밋된 경우 스킵
 
+**`pr.merge_method: merge` 운용에서는 이 단계가 커밋을 만들지 않는다** — 커밋은 ticket-implement Phase 6.7 이 Implementation Plan Phase 마다 남겼다. 여기서 뭉쳐 커밋하면 "티켓 1개 = 커밋 1개" 가 깨진다.
+
+- `git log --oneline ${base}..HEAD` 로 커밋 수 = Phase 수 확인. 다르면 보고
+- 미커밋 변경이 남아 있으면 **멈추고 보고** — 어느 Phase 커밋에 속하는지는 사람이 정한다 (`git commit --fixup` + `--autosquash` 또는 새 Phase)
+
 ### Step 3: 브랜치 푸시
 
 ```bash
@@ -280,5 +285,6 @@ Issue #{N} 완료:
 - **머지 방식**: `${pr.merge_method}` (기본 `squash`)
 - **링크/junction 주의**: worktree 정리는 링크 제거 후 `git worktree remove` (Step 7). `rm -rf` / `Remove-Item -Recurse` 금지
 - **PR body 의 `Closes #{N}` 필수**: 누락 시 Issue 가 자동으로 close 되지 않음 (base 가 기본 브랜치일 때). 그 외 경우는 Step 9-6 이 닫는다
+- **커밋 분할**: `pr.merge_method: merge` 면 커밋은 ticket-implement Phase 6.7 소관. Step 2 는 확인만 한다
 - **후속 작업 처리**: 사용자가 `new` 로 명시한 항목만 새 Issue. 다른 Issue 자동 수정·전파 금지
 - **Wiki 와 main repo 는 별도 git repo**: wiki 변경은 `${wiki.clone_path}` 에서 별도로 commit/push

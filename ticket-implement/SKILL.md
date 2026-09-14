@@ -65,6 +65,8 @@ gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state
 1. 재정비된 계획대로 코드 작성/수정 (심볼 단위 편집은 Serena 우선)
 2. 의미 있는 진행 단위마다 진행 로그 comment 추가 (Type B 절차 참조)
 
+`pr.merge_method: merge` 면 **Implementation Plan Phase 하나씩** 구현하고 Phase 5→6→6.5→6.7 을 그 Phase 마다 돈다. 그 외에는 전체를 구현하고 6.7 을 건너뛴다.
+
 ### Phase 6: 빌드 & 테스트
 1. 변경 코드 영역의 테스트 실행 (명령은 프로젝트 CLAUDE.md 의 "Common Commands" / "Testing" 섹션 참조)
 2. 신규 기능 / 버그 수정 시 검증 테스트 추가 후 실행
@@ -77,9 +79,19 @@ gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state
 
 1. Clear 항목은 ticket-review 가 즉시 수정
 2. 수정으로 코드가 바뀌었으면 Phase 6 의 테스트 재실행
-3. Needs review 항목이 **없으면** 멈추지 않고 Phase 7 로 진행. **있으면** 표로 제시하고 사용자 응답을 받아 반영 — 자동 파이프라인에서 유일하게 허용되는 대기 지점
+3. Needs review 항목이 **없으면** 멈추지 않고 다음 Phase (6.7 또는 7) 로 진행. **있으면** 표로 제시하고 사용자 응답을 받아 반영 — 자동 파이프라인에서 유일하게 허용되는 대기 지점
 
 중점 축: 주석 정책 (전역 CLAUDE.md 5절), 변수·함수·클래스 네이밍, 프로젝트 코딩 컨벤션·포맷.
+
+### Phase 6.7: Phase 단위 커밋 (`pr.merge_method: merge` 일 때만)
+
+"티켓 1개 = 커밋 1개" 운용에서는 커밋 분할이 구현의 일부다 — ticket-complete 가 나중에 뭉쳐서 커밋하면 bisect·부분 revert 가 죽는다.
+
+1. 방금 끝낸 Implementation Plan Phase 의 변경만 스테이징해 커밋 1개. 메시지 형식은 `ticket-complete` Step 2, 제목은 그 Phase 제목
+2. 빌드가 깨진 상태로 커밋하지 않는다 — Phase 6 통과가 전제
+3. 남은 Phase 가 있으면 Phase 5 로 돌아간다. 없으면 Phase 7
+
+`merge_method` 가 `merge` 가 아니면 이 단계 전체를 건너뛴다 (커밋은 ticket-complete Step 2 가 한다).
 
 ### Phase 7: 작업 보고 (자동 완료 처리 금지)
 
@@ -88,7 +100,7 @@ gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state
 
 1. 사용자에게 보고:
    - 구현 완료된 항목 (Implementation Plan Phase 단위) + Acceptance Criteria 충족 여부 (옵셔널 섹션은 있는 경우만)
-   - 변경된 파일 목록
+   - 변경된 파일 목록 + (Phase 단위 커밋 운용이면) 커밋 목록 `git log --oneline ${base}..HEAD`
    - 빌드/테스트 결과 요약
    - 자체 리뷰 결과 (즉시 수정 건수, 보류 항목)
    - 후속 작업 후보 (현재 Issue 범위 밖에서 발견한 명백한 이슈가 있을 때만 짧게 1-3 줄)
