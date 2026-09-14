@@ -24,6 +24,7 @@ GitHub Issue 로 Claude Code 가 실행할 개발 티켓을 구조적으로 작�
    - `${project.ssh_host}` ← config (없으면 `github.com`)
    - `${wiki.repo_url}` ← `git@${project.ssh_host}:${project.repo}.wiki.git` (universal default)
    - `${wiki.url_prefix}` ← `https://github.com/${project.repo}/wiki/` (universal default)
+   - `${branch}` · `${base}` ← Issue body 의 브랜치 줄 (worktree 생성 시점에 해석. CONFIG.md "브랜치 해석")
 7. **자가 검증**: 본문에 매핑 불가 `${...}` 가 있으면 보고 후 중단
 
 상세 스키마: `~/.claude/skills/ticket-plan/CONFIG.md`
@@ -351,20 +352,21 @@ gh issue edit {N} --repo "${project.repo}" --body-file /tmp/issue-body-updated.m
 
 **Worktree 규칙**:
 - **Worktree 이름**: `${worktree.prefix}-{issue-number}-{slug}` (예: `asdf-115-add-websocket`)
-- **브랜치 이름**: `{issue-number}-{slug}` (예: `115-add-websocket`)
-- **slug**: Issue 제목에서 kebab-case 추출 (짧게)
-- **Base 브랜치**: `${project.default_branch}`
+- **브랜치 이름**: `${branch}` — Issue body 의 브랜치 줄, 없으면 `{issue-number}-{slug}` (CONFIG.md "브랜치 해석")
+- **slug**: Issue 제목에서 kebab-case 추출 (짧게). 디렉토리명 전용
+- **Base 브랜치**: `${base}` — 없으면 `${project.default_branch}`
 
 **실행 절차**:
 
 ```bash
-git worktree add ../${worktree.prefix}-{issue-number}-{slug} -b {issue-number}-{slug} ${project.default_branch}
+git branch --track ${base} origin/${base}   # 로컬에 없을 때만
+git worktree add ../${worktree.prefix}-{issue-number}-{slug} -b ${branch} ${base}
 ```
 
 사용자 안내:
 ```
 Worktree 생성: ../${worktree.prefix}-{issue-number}-{slug}
-브랜치: {issue-number}-{slug} (base: ${project.default_branch})
+브랜치: ${branch} (base: ${base})
 연결 Issue: #{issue-number}
 
 구현은 ticket-implement {issue-number} 로 시작하세요.
@@ -464,6 +466,7 @@ def core_op(x: T, *, opt: U = DEFAULT, retries: int = 3) -> R:
 - #123 — 의존 / 관련 Issue
 - [WebSocket Flow Analysis](${wiki.url_prefix}115-1-websocket-flow-analysis) — 분석 문서 (wiki URL 사용; Issue body 에서는 `[[]]` 미동작)
 - `path/to/relevant/file.py`
+- 브랜치 `feat/foo` (base `feat/bar`)   <!-- 계획이 브랜치명을 확정한 경우만. 형식 고정 — CONFIG.md "브랜치 해석" -->
 
 <!-- ── 이하 필수: body 최하단 고정 ── -->
 
@@ -560,7 +563,8 @@ LSTM 학습이 200 epoch 이상 진행되어도 메모리가 안정 유지되도
 
 PR 생성 형식은 `ticket-complete` Step 4 참조. 핵심:
 - PR 제목: `{N}-{Short description}` (예: `115-Add WebSocket real-time price updates`)
-- PR 본문: `Closes #{N}` 포함 → 머지 시 Issue 자동 close
+- PR base: `${base}`
+- PR 본문: `Closes #{N}` 포함 → base 가 repo 기본 브랜치일 때만 머지 시 Issue 자동 close
 
 ## 권장 사항
 

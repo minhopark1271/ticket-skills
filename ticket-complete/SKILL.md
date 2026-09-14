@@ -6,18 +6,20 @@ description: GitHub Issue 를 end-to-end 로 마무리합니다. 커밋, 푸시,
 # Ticket Complete
 
 GitHub Issue 구현 완료 후 전체 마무리 프로세스를 한 번에 실행합니다.
-커밋 → PR 생성 (Closes #N) → PR 머지 → worktree/브랜치 정리 → 구현 결과 comment → Issue 라벨 정리 (PR 머지로 자동 close) → wiki 발행(push).
+커밋 → PR 생성 (Closes #N) → PR 머지 → worktree/브랜치 정리 → 구현 결과 comment → Issue 라벨 정리·close → wiki 발행(push).
 
 ## Bootstrap (모든 호출 시 첫 단계)
 
 `{project_root}/.claude/ticket-skill-configs.yaml` (+ 로컬 `ticket-skill-configs.local.yaml` override, 있으면) 로드·병합 → minimal 4 키 검증 → **계정 라우팅** → `${var}` 치환. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
+
+`${branch}`·`${base}` 는 config 가 아니라 Issue body 에서 나온다 — Step 1 에서 확정한다.
 
 **계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 PR/커밋/push 전에 `gh auth switch --user ${project.gh_account}` 실행. `project.git_email` 이 있으면 커밋 전 `git config user.email ${project.git_email}` (로컬). `${wiki.repo_url}` 은 `git@${project.ssh_host}:...` 로 유도 (ssh_host 기본 `github.com`) — wiki push 가 올바른 SSH 키 사용. main repo push 는 `origin` remote URL 을 따름. 세 키 모두 없으면 단일 계정 동작.
 
 ## 데이터 소스
 
 - **티켓**: GitHub Issues (`${project.repo}`)
-- **PR ↔ Issue 연동**: PR body 의 `Closes #{N}` 으로 머지 시 Issue 자동 close
+- **PR ↔ Issue 연동**: PR body 의 `Closes #{N}` 으로 머지 시 Issue 자동 close. **base 가 repo 기본 브랜치일 때만 동작** — 아니면 Step 9-6 이 명시 close (CONFIG.md "브랜치 해석")
 - **Wiki**: ticket-doc 가 드래프트(로컬 커밋)로 남긴 wiki 페이지를 이 스킬이 **발행(push)** — 자동 파이프라인의 유일한 발행 지점
 
 ## 사용 시점
@@ -33,15 +35,17 @@ GitHub Issue 구현 완료 후 전체 마무리 프로세스를 한 번에 실�
 
 - **코드 변경 + 머지 흐름 (기본)**: Step 1~11 전체 수행
 - **draft PR 흐름** (`pr.draft: true`): Step 1~4 로 draft PR 을 열고 **Step 5 에서 중단**. Step 6~8(머지·pull·정리) 스킵, Step 9~11 은 수행하되 Issue 는 열어 둔다. 사람이 draft 해제·CI 확인 후 재호출하면 Step 5 부터 이어간다
-- **Docs-only 변경** (글로벌 스킬, 외부 문서 등 worktree·PR 불필요): Step 1 의 Issue 확인 후 **Step 2~8 스킵**. Step 9 (라벨 정리 / 체크리스트 / 구현 결과 comment / close), Step 10 (wiki 발행) 만 수행. PR/머지가 없으므로 Issue 자동 close 도 발생하지 않음 → Step 9 에서 `gh issue close {N}` 를 명시적으로 호출
+- **Docs-only 변경** (글로벌 스킬, 외부 문서 등 worktree·PR 불필요): Step 1 의 Issue 확인 후 **Step 2~8 스킵**. Step 9 (라벨 정리 / 체크리스트 / 구현 결과 comment / close), Step 10 (wiki 발행) 만 수행. PR/머지가 없으므로 Issue 자동 close 도 발생하지 않음 → Step 9-6 의 명시 close 수행
 
 ## 사용 절차
 
 ### Step 1: 상태 확인
 
 1. **Issue 확인**: `gh issue view {N} --repo "${project.repo}" --json title,body,labels,state,url,comments`
-2. **Worktree 확인**: `git worktree list` 로 `${worktree.prefix}-{N}-{slug}` 존재 여부
-3. **현재 위치 확인**: `git branch --show-current`
+2. **브랜치 해석**: body `## Related` 의 브랜치 줄로 `${branch}`·`${base}` 확정 (CONFIG.md "브랜치 해석")
+3. **Worktree 확인**: `git worktree list` 로 `${worktree.prefix}-{N}-{slug}` 존재 여부
+4. **현재 위치 확인**: `git branch --show-current`
+5. **repo 기본 브랜치 확인**: `gh repo view "${project.repo}" --json defaultBranchRef --jq .defaultBranchRef.name` — `${base}` 와 다르면 `Closes #{N}` 이 안 먹으므로 Step 9-6 에서 명시 close
 
 ### Step 2: Worktree 에서 커밋
 
@@ -67,13 +71,13 @@ git status -u
 ### Step 3: 브랜치 푸시
 
 ```bash
-git push -u origin {N}-{slug}
+git push -u origin ${branch}
 ```
 
 ### Step 4: PR 생성
 
 ```bash
-gh pr create --repo "${project.repo}" --base ${project.default_branch} ${pr.draft ? --draft} --title "{N}-{Short description}" --body "$(cat <<'EOF'
+gh pr create --repo "${project.repo}" --base ${base} ${pr.draft ? --draft} --title "{N}-{Short description}" --body "$(cat <<'EOF'
 ## Summary
 - {변경사항 요약}
 
@@ -96,15 +100,15 @@ EOF
 ```
 
 **필수**:
-- `--base ${project.default_branch}`
+- `--base ${base}` (Issue 브랜치 줄이 없으면 `${project.default_branch}`)
 - `pr.draft: true` 면 `--draft` 추가 (CONFIG.md "PR 운용"). 기본은 붙이지 않음
-- 본문에 `Closes #{N}` 한 줄 — 머지 시 Issue 자동 close
+- 본문에 `Closes #{N}` 한 줄 — base 가 repo 기본 브랜치면 머지 시 자동 close, 아니면 기록용이고 Step 9-6 이 닫는다
 - PR 제목: `{N}-{Short description}`
 - 최하단 세션 서명 footer (머신 · 세션 ID) — `~/.claude/skills/ticket-plan/STYLE.md` "History · 세션 서명"
 
 ### Step 5: PR 머지
 
-**`pr.draft: true` 면 여기서 중단한다.** draft PR 은 CI 가 안 돌아 머지 판단 근거가 없다. `gh pr ready` 를 **호출하지 말고** PR URL 과 "draft 해제 → CI 통과 확인 후 재호출" 을 보고한 뒤 Step 6~8(머지 의존 단계)을 건너뛴다. Step 9~11(Issue comment·라벨·wiki 발행)은 그대로 수행하되 Issue 는 열어 둔다 — 머지 시 `Closes #{N}` 이 닫는다.
+**`pr.draft: true` 면 여기서 중단한다.** draft PR 은 CI 가 안 돌아 머지 판단 근거가 없다. `gh pr ready` 를 **호출하지 말고** PR URL 과 "draft 해제 → CI 통과 확인 후 재호출" 을 보고한 뒤 Step 6~8(머지 의존 단계)을 건너뛴다. Step 9~11(Issue comment·라벨·wiki 발행)은 그대로 수행하되 Issue 는 열어 둔다 (9-6 도 건너뛴다) — 나중에 머지될 때 닫힌다.
 
 **중요: 사용자 확인 필수**
 PR 머지 전 사용자에게 빌드/테스트 결과 확인 여부를 묻습니다. "머지해", "테스트 완료", "확인 완료" 등 명시 승인 없으면 머지 금지.
@@ -115,13 +119,13 @@ gh pr merge {pr-number} --repo "${project.repo}" --${pr.merge_method}
 
 `pr.merge_method` 기본값은 `squash`. "티켓 1개 = 커밋 1개" 를 쓰는 프로젝트는 config 에서 `merge` 로 바꾼다 — squash 는 커밋 단위 bisect·부분 revert 를 죽인다.
 
-머지 성공 시 Issue `#{N}` 은 GitHub 가 자동 close 처리. 추가 `gh issue close` 불필요.
+`${base}` 가 repo 기본 브랜치면 머지 성공 시 Issue `#{N}` 은 GitHub 가 자동 close 한다. 아니면 열린 채로 남으니 Step 9-6 에서 명시 close.
 
 ### Step 6: Main Repo 이동 및 Pull
 
 ```bash
 cd ${project_root}
-git checkout ${project.default_branch}
+git checkout ${base}
 git pull
 ```
 
@@ -146,15 +150,15 @@ $targets | ForEach-Object { Test-Path $_ }                  # 원본 보존 확�
 ### Step 8: 브랜치 정리
 
 ```bash
-git branch -d {N}-{slug}
-git push origin --delete {N}-{slug}
+git branch -d ${branch}
+git push origin --delete ${branch}
 ```
 
 이미 삭제됐으면 스킵.
 
 ### Step 9: Issue 완료 처리
 
-PR 머지로 Issue 가 이미 closed 상태이지만, 추가로 다음을 수행:
+`${base}` 가 repo 기본 브랜치면 Issue 는 머지로 이미 closed 다. 아니면 9-6 이 닫는다. 공통으로 다음을 수행:
 
 #### 9-1. 라벨 정리
 ```bash
@@ -213,6 +217,16 @@ gh issue comment {N} --repo "${project.repo}" --body-file /tmp/results.md
 - 사용자가 응답하지 않거나 모호하면 모두 `skip` 처리.
 - **다른 Issue 를 스캔하거나, 자동으로 라벨/comment 를 추가하지 않습니다.**
 
+#### 9-6. 명시 close (자동 close 가 없는 경우)
+
+`${base}` 가 repo 기본 브랜치가 아니거나 docs-only 흐름이면 GitHub 가 Issue 를 닫지 않는다:
+
+```bash
+gh issue close {N} --repo "${project.repo}" --reason completed
+```
+
+머지가 끝난 경우에만 호출한다 — draft 흐름은 Issue 를 열어 둔다 (Step 5).
+
 ### Step 10: Wiki 발행 (해당 시)
 
 구현/계획 중 `ticket-doc` 이 남긴 wiki **드래프트**(로컬 커밋)를 여기서 **발행(push)** 합니다 — 자동 파이프라인의 유일한 발행 지점:
@@ -241,8 +255,8 @@ gh issue view {N} --repo "${project.repo}"    # Issue closed + 라벨 정리 확
 사용자에게 완료 보고:
 ```
 Issue #{N} 완료:
-- PR #{PR번호} 머지 완료: {PR URL}
-- Issue 자동 close 완료
+- PR #{PR번호} 머지 완료: {PR URL} (base: ${base})
+- Issue close 완료 ({자동 / 명시})
 - Worktree 정리 완료
 - 브랜치 정리 완료 (local + remote)
 - 구현 결과 comment 추가 완료
@@ -256,15 +270,15 @@ Issue #{N} 완료:
 - **`--merge` 거부**: repo 설정이 merge commit 을 막고 있다 → Settings > General > Pull Requests 의 "Allow merge commits" 확인 안내. 임의로 `--squash` 대체 금지
 - **worktree 제거 실패**: 미커밋 변경 → 사용자 확인 후 `--force`
 - **브랜치 삭제 실패**: 이미 삭제됨 → 스킵
-- **Issue 자동 close 실패**: PR body 의 `Closes #{N}` 누락 가능 → 수동 `gh issue close {N} --repo "${project.repo}"`
+- **Issue 자동 close 실패**: `${base}` 가 repo 기본 브랜치가 아니거나 PR body 의 `Closes #{N}` 누락 → Step 9-6 의 명시 close
 - **Wiki push 실패**: 충돌 시 `git pull --rebase` 후 재시도
 
 ## 주요 참고 사항
 
-- **Base 브랜치**: `${project.default_branch}`
+- **브랜치·base**: `${branch}` / `${base}` — Issue body 브랜치 줄, 없으면 `{N}-{slug}` / `${project.default_branch}` (CONFIG.md "브랜치 해석")
 - **draft 해제는 사람이 한다**: `pr.draft: true` 일 때 스킬이 `gh pr ready` 를 호출하면 CI 발동 시점 통제가 사라진다. 금지
 - **머지 방식**: `${pr.merge_method}` (기본 `squash`)
 - **링크/junction 주의**: worktree 정리는 링크 제거 후 `git worktree remove` (Step 7). `rm -rf` / `Remove-Item -Recurse` 금지
-- **PR body 의 `Closes #{N}` 필수**: 누락 시 Issue 가 자동으로 close 되지 않음
+- **PR body 의 `Closes #{N}` 필수**: 누락 시 Issue 가 자동으로 close 되지 않음 (base 가 기본 브랜치일 때). 그 외 경우는 Step 9-6 이 닫는다
 - **후속 작업 처리**: 사용자가 `new` 로 명시한 항목만 새 Issue. 다른 Issue 자동 수정·전파 금지
 - **Wiki 와 main repo 는 별도 git repo**: wiki 변경은 `${wiki.clone_path}` 에서 별도로 commit/push

@@ -79,7 +79,7 @@ description: 작성/수정한 코드를 (1) 기능 요구사항 위반, (2) 문�
 - 인자 / git 상태 / 사용자 질의로 대상 파일·hunk 결정
 - 변경된 라인 위주로 컨텍스트 파악 (Read, Grep, 심볼 단위는 Serena)
 - 사용자가 직접 수정한 부분과 그 **영향 범위**까지만 검토. 무관 영역으로 확장 금지.
-- **보드 동기화**: 현재 브랜치(`{N}-{slug}`)·worktree·인자에서 Issue 번호 N 을 해석할 수 있고 config 에 `board` 가 있으면 `Set-BoardStatus({N}, in_review)` (CONFIG.md "프로젝트 보드 Status 동기화") 실행. N 미상 또는 보드 미설정이면 skip.
+- **보드 동기화**: worktree 디렉토리명(`${worktree.prefix}-{N}-{slug}`)·현재 브랜치·인자에서 Issue 번호 N 을 해석할 수 있고 config 에 `board` 가 있으면 `Set-BoardStatus({N}, in_review)` (CONFIG.md "프로젝트 보드 Status 동기화") 실행. N 미상 또는 보드 미설정이면 skip.
 
 ### Step 2: 3축 검토
 - 각 파일·hunk 마다 기능/문법/품질 3축으로 점검

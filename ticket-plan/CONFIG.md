@@ -50,7 +50,7 @@ wiki:
 | `project.ssh_host` | `github.com` (config 에 없을 때) |
 | `wiki.repo_url` | `git@${project.ssh_host}:${project.repo}.wiki.git` (ssh_host 기본 `github.com`) |
 | `wiki.url_prefix` | `https://github.com/${project.repo}/wiki/` (웹 브라우즈 URL — 항상 `github.com`) |
-| `branch_pattern` | `{N}-{slug}` |
+| `branch_pattern` | `{N}-{slug}` — Issue body 에 브랜치 줄이 있으면 그 값 (아래 "브랜치 해석") |
 | `worktree_pattern` | `${worktree.prefix}-{N}-{slug}` |
 | `pr.title_pattern` | `{N}-{Short description}` |
 | `pr.close_keyword` | `Closes #{N}` |
@@ -58,6 +58,24 @@ wiki:
 | `pr.draft` | `false` — PR 을 바로 ready 상태로 연다 |
 | `pr.merge_method` | `squash` |
 | **Universal labels** (lazy 생성) | `~/.claude/skills/ticket-plan/SKILL.md` 의 "지연 초기화" 섹션 참조 |
+
+## 브랜치 해석 — `${branch}` · `${base}`
+
+Issue body `## Related` 에 아래 형식의 줄이 있으면 그 값이 브랜치명과 PR base 다. 없으면 기본 패턴을 쓴다.
+
+```
+- 브랜치 `feat/foo` (base `feat/bar`)
+```
+
+| 변수 | 줄 있음 | 줄 없음 |
+|---|---|---|
+| `${branch}` | 줄의 브랜치명 | `{N}-{slug}` |
+| `${base}` | 줄의 base | `${project.default_branch}` |
+
+- 계획 문서가 브랜치명을 확정한 분할 그룹에서 스킬이 `{N}-{slug}` 로 덮어쓰면 계획·원격 브랜치와 어긋난다. Issue 의 줄이 이긴다.
+- **worktree 디렉토리명은 브랜치와 무관하게 `${worktree.prefix}-{N}-{slug}`** — 브랜치명의 `/` 를 경로에 넣지 않고, 다른 스킬이 디렉토리명에서 N 을 읽는다.
+- worktree 생성 전 `${base}` 로컬 브랜치가 없으면 `git branch --track ${base} origin/${base}` 로 먼저 만든다. 없는 채로 `git worktree add` 를 부르면 ref 해석에 실패한다.
+- `${base}` 가 **repo 기본 브랜치가 아니면 PR body 의 `Closes #{N}` 이 Issue 를 닫지 않는다** — GitHub 는 기본 브랜치로의 머지에서만 키워드를 처리한다. 기본 브랜치 조회는 `gh repo view ${project.repo} --json defaultBranchRef --jq .defaultBranchRef.name`, 대응은 ticket-complete Step 9-6 의 명시 close.
 
 ## Optional — PR 운용
 
@@ -206,6 +224,8 @@ board:
 | `${wiki.repo_url}` | universal default | `git@${project.ssh_host}:minhopark1271/asdf.wiki.git` |
 | `${wiki.url_prefix}` | universal default | `https://github.com/minhopark1271/asdf/wiki/` |
 | `${project_root}` | **메타 변수** (Bootstrap 1번 결과 — **메인 worktree 루트**. worktree 안에서 실행해도 메인을 가리킨다) | `/Users/minhopark/Projects/asdf` |
+| `${branch}` | **메타 변수** (Issue body 브랜치 줄 → 없으면 `{N}-{slug}`. "브랜치 해석") | `feat/reference-model-layer` |
+| `${base}` | **메타 변수** (Issue body 브랜치 줄 → 없으면 `${project.default_branch}`. "브랜치 해석") | `feat/reference-model-manifest` |
 
 ## Bootstrap 절차 (5개 스킬 공통)
 

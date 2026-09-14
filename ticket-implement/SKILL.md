@@ -15,6 +15,7 @@ GitHub Issue 의 진행 상황을 업데이트합니다. 작업 시작, 진행 �
 
 핵심 치환:
 - `${project.repo}`, `${project.default_branch}`, `${worktree.prefix}`, `${wiki.clone_path}` ← config
+- `${branch}`, `${base}` ← Issue body `## Related` 의 브랜치 줄, 없으면 `{N}-{slug}` · `${project.default_branch}` (CONFIG.md "브랜치 해석")
 - `${wiki.repo_url}`, `${wiki.url_prefix}` ← universal default (`${wiki.repo_url}` 은 `git@${project.ssh_host}:...`, ssh_host 기본 `github.com`)
 
 **계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 `gh`/git 작업 전에 `gh auth switch --user ${project.gh_account}` 실행. `project.git_email` 이 있으면 worktree 진입 후 `git config user.email ${project.git_email}` (로컬). 없으면 현재 계정/전역 설정 사용.
@@ -41,7 +42,8 @@ gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state
 1. body 의 Goal / Background / Technical Details / Design / Implementation Plan / Acceptance Criteria 섹션 확인 (옵셔널 섹션 부재 시 스킵)
 2. 라벨에서 상태/우선순위/카테고리/컴포넌트 파악
 3. body 의 `## Related` 에 `#{N}` 으로 참조된 다른 Issue 가 있으면 `gh issue view` 로 간단히 확인
-4. Issue 요약을 사용자에게 1~2 문단으로 브리핑 (목표, 범위, 핵심 제약)
+4. `## Related` 의 브랜치 줄로 `${branch}`·`${base}` 확정 (CONFIG.md "브랜치 해석")
+5. Issue 요약을 사용자에게 1~2 문단으로 브리핑 (목표, 범위, 핵심 제약)
 
 ### Phase 2: 코드 파악
 1. Issue 가 다루는 영역의 관련 파일/심볼 식별 (Glob/Grep, 심볼 단위 작업 시 Serena 활용 — 전역 CLAUDE.md "Serena MCP 우선" 규칙 참조)
@@ -113,9 +115,10 @@ state 가 `CLOSED` 면 사용자에게 확인 (이미 완료된 Issue 일 수 �
    라벨이 없으면 지연 초기화 (ticket-plan 의 "지연 초기화 — Universal 라벨" 섹션 참조) 로 생성 후 재시도.
 2. **Worktree 확인/생성** (ticket-plan 에서 이미 생성된 경우 스킵):
    ```bash
-   git worktree add ../${worktree.prefix}-{N}-{slug} -b {N}-{slug} ${project.default_branch}
+   git branch --track ${base} origin/${base}   # 로컬에 없을 때만
+   git worktree add ../${worktree.prefix}-{N}-{slug} -b ${branch} ${base}
    ```
-   slug 는 Issue 제목에서 kebab-case 추출.
+   slug 는 Issue 제목에서 kebab-case 추출 — **디렉토리명에만** 쓴다. 브랜치명은 `${branch}` (CONFIG.md "브랜치 해석").
 3. **작업 시작 comment 추가**:
    ```bash
    gh issue comment {N} --repo "${project.repo}" --body-file /tmp/progress.md
@@ -124,7 +127,7 @@ state 가 `CLOSED` 면 사용자에게 확인 (이미 완료된 Issue 일 수 �
 4. **보드 동기화**: config 에 `board` 가 있으면 `Set-BoardStatus({N}, in_progress)` (CONFIG.md "프로젝트 보드 Status 동기화") 실행. 보드 미설정이면 skip.
 
 #### Type B: 진행 기록 (ongoing work)
-1. 관련 PR 링크 확인: `gh pr list --repo "${project.repo}" --search "head:{N}-{slug}" --state all`
+1. 관련 PR 링크 확인: `gh pr list --repo "${project.repo}" --search "head:${branch}" --state all`
 2. **진행 comment 추가**:
    ```bash
    gh issue comment {N} --repo "${project.repo}" --body-file /tmp/progress.md
@@ -230,7 +233,7 @@ gh issue edit {N} --repo "${project.repo}" --add-label "backlog"
 
 ```bash
 gh issue edit 115 --repo "${project.repo}" --add-label "in-progress"
-git worktree add ../${worktree.prefix}-115-add-websocket -b 115-add-websocket ${project.default_branch}
+git worktree add ../${worktree.prefix}-115-add-websocket -b 115-add-websocket ${project.default_branch}   # 브랜치 줄 없는 경우
 gh issue comment 115 --repo "${project.repo}" --body-file /tmp/progress.md
 ```
 
@@ -257,7 +260,8 @@ gh issue comment 115 --repo "${project.repo}" --body-file /tmp/progress.md
 
 PR 생성 형식은 `ticket-complete` Step 4 참조. 핵심:
 - PR 제목: `{N}-{Short description}`
-- PR 본문: `Closes #{N}` 포함 → 머지 시 Issue 자동 close
+- PR base: `${base}`
+- PR 본문: `Closes #{N}` 포함 → base 가 repo 기본 브랜치일 때만 머지 시 Issue 자동 close (아니면 ticket-complete Step 9-6 이 명시 close)
 
 ## 후속 작업 처리 원칙
 
