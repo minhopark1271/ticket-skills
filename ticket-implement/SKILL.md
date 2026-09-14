@@ -11,6 +11,8 @@ GitHub Issue 의 진행 상황을 업데이트합니다. 작업 시작, 진행 �
 
 `{project_root}/.claude/ticket-skill-configs.yaml` (+ 로컬 `ticket-skill-configs.local.yaml` override, 있으면) 로드·병합 → minimal 4 키 검증 → **계정 라우팅** → `${var}` 치환. 상세 절차와 변수 매핑: `~/.claude/skills/ticket-plan/CONFIG.md`.
 
+`${project_root}` 는 현재 worktree 가 아니라 **메인 worktree 루트**다 — Type B(진행 기록)는 worktree 안에서 호출되는데 `.claude/` 는 대개 gitignore 라 거기에 없다.
+
 핵심 치환:
 - `${project.repo}`, `${project.default_branch}`, `${worktree.prefix}`, `${wiki.clone_path}` ← config
 - `${wiki.repo_url}`, `${wiki.url_prefix}` ← universal default (`${wiki.repo_url}` 은 `git@${project.ssh_host}:...`, ssh_host 기본 `github.com`)

@@ -13,7 +13,7 @@
 - **로컬 override** (`ticket-skill-configs.local.yaml`): 개인·머신별 키(gh 계정·SSH host·커밋 이메일). 프로젝트 `.gitignore` 에 추가하고 **커밋하지 않음**. 없으면 무시(단일 계정 사용자는 불필요).
 - **병합 규칙**: Bootstrap 이 공유 → 로컬 순으로 로드하고 **로컬이 공유를 덮어씀**(deep merge).
 - **철칙**: 특정 사람에게만 맞는 값(개인 gh 계정명·`~/.ssh/config` alias·개인 이메일)은 공유 config 에 **절대 넣지 않는다** — 전부 로컬 override.
-- **프로젝트 루트 감지**: `git rev-parse --show-toplevel` 결과 또는 현재 cwd
+- **프로젝트 루트 감지**: `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"` — **메인 worktree 루트**. 링크 worktree 안에서 실행해도 메인을 가리킨다(아래 "Bootstrap 절차" 1번)
 
 ## Minimal Schema (4 키 — 출발점)
 
@@ -205,17 +205,19 @@ board:
 | `${project.git_email}` | config (옵셔널) | `minhopark@numereal.ai` |
 | `${wiki.repo_url}` | universal default | `git@${project.ssh_host}:minhopark1271/asdf.wiki.git` |
 | `${wiki.url_prefix}` | universal default | `https://github.com/minhopark1271/asdf/wiki/` |
-| `${project_root}` | **메타 변수** (Bootstrap 1번 결과 `git rev-parse --show-toplevel`) | `/Users/minhopark/Projects/asdf` |
+| `${project_root}` | **메타 변수** (Bootstrap 1번 결과 — **메인 worktree 루트**. worktree 안에서 실행해도 메인을 가리킨다) | `/Users/minhopark/Projects/asdf` |
 
 ## Bootstrap 절차 (5개 스킬 공통)
 
 각 SKILL.md 상단에 동일한 Bootstrap 섹션을 포함. 스킬 실행 시 LLM 이 다음 순서로 처리:
 
-1. **프로젝트 루트 감지**
+1. **프로젝트 루트 감지** — 현재 worktree 가 아니라 **메인 worktree** 를 잡는다
    ```bash
-   git rev-parse --show-toplevel
+   dirname "$(git rev-parse --path-format=absolute --git-common-dir)"
    ```
-   실패 시 현재 cwd 사용
+   실패 시 현재 cwd 사용.
+
+   `--show-toplevel` 을 쓰면 안 된다. 링크 worktree 안에서는 그 worktree 경로를 돌려주는데, `.claude/` 는 대개 `.gitignore` 대상이라 worktree 에 복제되지 않는다 — config 를 못 찾고 Bootstrap 이 죽는다. `--git-common-dir` 은 어느 worktree 에서 실행해도 메인 repo 의 `.git` 을 가리키므로 그 부모가 곧 config 가 있는 루트다. 메인 repo 에서 실행해도 같은 값이라 분기가 없다.
 2. **Config 로드 + 로컬 override 병합**
    - 공유: `{project_root}/.claude/ticket-skill-configs.yaml` — 없으면 에러 보고 후 중단 (minimal 4 키 작성 안내)
    - 로컬: `{project_root}/.claude/ticket-skill-configs.local.yaml` — 있으면 deep merge (**로컬 우선**). 없으면 skip

@@ -14,6 +14,8 @@ description: 작성/수정한 코드를 (1) 기능 요구사항 위반, (2) 문�
 
 `{project_root}/.claude/ticket-skill-configs.yaml` 로드 → minimal 4 키 검증. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
 
+`${project_root}` 는 현재 worktree 가 아니라 **메인 worktree 루트**다 — 이 스킬은 `{N}-{slug}` worktree 안에서 호출되는 일이 잦은데 `.claude/` 는 대개 gitignore 라 거기에 없다.
+
 이 스킬은 코드만 검토하므로 `gh`/git 원격 작업이 없어 계정 라우팅이 불필요하지만, 동일 family 의 규약 준수를 위해 Bootstrap 을 거칩니다. (멀티 계정 키 `project.gh_account` / `ssh_host` / `git_email` 은 본 스킬에서 무시) 빌드/테스트/린트 **명령은 프로젝트 CLAUDE.md** 의 "Common Commands" / "Testing" / "Linting" 섹션을 참조.
 
 ## 적용 시점
