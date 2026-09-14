@@ -32,6 +32,7 @@ GitHub Issue 구현 완료 후 전체 마무리 프로세스를 한 번에 실�
 ## 변경 유형
 
 - **코드 변경 + 머지 흐름 (기본)**: Step 1~11 전체 수행
+- **draft PR 흐름** (`pr.draft: true`): Step 1~4 로 draft PR 을 열고 **Step 5 에서 중단**. Step 6~8(머지·pull·정리) 스킵, Step 9~11 은 수행하되 Issue 는 열어 둔다. 사람이 draft 해제·CI 확인 후 재호출하면 Step 5 부터 이어간다
 - **Docs-only 변경** (글로벌 스킬, 외부 문서 등 worktree·PR 불필요): Step 1 의 Issue 확인 후 **Step 2~8 스킵**. Step 9 (라벨 정리 / 체크리스트 / 구현 결과 comment / close), Step 10 (wiki 발행) 만 수행. PR/머지가 없으므로 Issue 자동 close 도 발생하지 않음 → Step 9 에서 `gh issue close {N}` 를 명시적으로 호출
 
 ## 사용 절차
@@ -72,7 +73,7 @@ git push -u origin {N}-{slug}
 ### Step 4: PR 생성
 
 ```bash
-gh pr create --repo "${project.repo}" --base ${project.default_branch} --title "{N}-{Short description}" --body "$(cat <<'EOF'
+gh pr create --repo "${project.repo}" --base ${project.default_branch} ${pr.draft ? --draft} --title "{N}-{Short description}" --body "$(cat <<'EOF'
 ## Summary
 - {변경사항 요약}
 
@@ -96,18 +97,23 @@ EOF
 
 **필수**:
 - `--base ${project.default_branch}`
+- `pr.draft: true` 면 `--draft` 추가 (CONFIG.md "PR 운용"). 기본은 붙이지 않음
 - 본문에 `Closes #{N}` 한 줄 — 머지 시 Issue 자동 close
 - PR 제목: `{N}-{Short description}`
 - 최하단 세션 서명 footer (머신 · 세션 ID) — `~/.claude/skills/ticket-plan/STYLE.md` "History · 세션 서명"
 
 ### Step 5: PR 머지
 
+**`pr.draft: true` 면 여기서 중단한다.** draft PR 은 CI 가 안 돌아 머지 판단 근거가 없다. `gh pr ready` 를 **호출하지 말고** PR URL 과 "draft 해제 → CI 통과 확인 후 재호출" 을 보고한 뒤 Step 6~8(머지 의존 단계)을 건너뛴다. Step 9~11(Issue comment·라벨·wiki 발행)은 그대로 수행하되 Issue 는 열어 둔다 — 머지 시 `Closes #{N}` 이 닫는다.
+
 **중요: 사용자 확인 필수**
 PR 머지 전 사용자에게 빌드/테스트 결과 확인 여부를 묻습니다. "머지해", "테스트 완료", "확인 완료" 등 명시 승인 없으면 머지 금지.
 
 ```bash
-gh pr merge {pr-number} --repo "${project.repo}" --squash
+gh pr merge {pr-number} --repo "${project.repo}" --${pr.merge_method}
 ```
+
+`pr.merge_method` 기본값은 `squash`. "티켓 1개 = 커밋 1개" 를 쓰는 프로젝트는 config 에서 `merge` 로 바꾼다 — squash 는 커밋 단위 bisect·부분 revert 를 죽인다.
 
 머지 성공 시 Issue `#{N}` 은 GitHub 가 자동 close 처리. 추가 `gh issue close` 불필요.
 
@@ -246,7 +252,8 @@ Issue #{N} 완료:
 
 ## 오류 처리
 
-- **PR 머지 실패**: CI 체크 실패 또는 conflict → 원인 안내
+- **PR 머지 실패**: CI 체크 실패 또는 conflict → 원인 안내. `Pull request is in draft state` 면 Step 5 의 draft 게이트를 안 탄 것 — 머지하지 말고 보고
+- **`--merge` 거부**: repo 설정이 merge commit 을 막고 있다 → Settings > General > Pull Requests 의 "Allow merge commits" 확인 안내. 임의로 `--squash` 대체 금지
 - **worktree 제거 실패**: 미커밋 변경 → 사용자 확인 후 `--force`
 - **브랜치 삭제 실패**: 이미 삭제됨 → 스킵
 - **Issue 자동 close 실패**: PR body 의 `Closes #{N}` 누락 가능 → 수동 `gh issue close {N} --repo "${project.repo}"`
@@ -255,6 +262,8 @@ Issue #{N} 완료:
 ## 주요 참고 사항
 
 - **Base 브랜치**: `${project.default_branch}`
+- **draft 해제는 사람이 한다**: `pr.draft: true` 일 때 스킬이 `gh pr ready` 를 호출하면 CI 발동 시점 통제가 사라진다. 금지
+- **머지 방식**: `${pr.merge_method}` (기본 `squash`)
 - **링크/junction 주의**: worktree 정리는 링크 제거 후 `git worktree remove` (Step 7). `rm -rf` / `Remove-Item -Recurse` 금지
 - **PR body 의 `Closes #{N}` 필수**: 누락 시 Issue 가 자동으로 close 되지 않음
 - **후속 작업 처리**: 사용자가 `new` 로 명시한 항목만 새 Issue. 다른 Issue 자동 수정·전파 금지
