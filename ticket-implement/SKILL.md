@@ -1,6 +1,6 @@
 ---
 name: ticket-implement
-description: GitHub Issue 를 end-to-end 로 구현합니다. issue comment 와 라벨로 진행 상황을 추적. 작업 시작, 진행 기록, 블로커 기록 시 사용. 인자로 Issue 번호 전달 시 (예 `ticket-implement 115`) 별도 확인 없이 전체 파이프라인 자동 실행 — Issue 파악 → 코드 분석 → 계획 재정비 → 구현 → 테스트. 프로젝트별 설정은 {project_root}/.claude/ticket-skill-configs.yaml 에서 읽습니다.
+description: GitHub Issue 를 end-to-end 로 구현합니다. issue comment 와 라벨로 진행 상황을 추적. 작업 시작, 진행 기록, 블로커 기록 시 사용. 인자로 Issue 번호 전달 시 (예 `ticket-implement 115`) 별도 확인 없이 전체 파이프라인 자동 실행 — Issue 파악 → 코드 분석 → 계획 재정비 → 구현 → 테스트 → 자체 리뷰. 프로젝트별 설정은 {project_root}/.claude/ticket-skill-configs.yaml 에서 읽습니다.
 ---
 
 # Ticket Implement
@@ -30,7 +30,7 @@ GitHub Issue 의 진행 상황을 업데이트합니다. 작업 시작, 진행 �
 별도의 안내·확인 없이 아래 파이프라인을 **순차적으로 끝까지** 실행합니다.
 이는 사용자가 다음과 같은 프롬프트를 직접 입력한 것과 동일하게 동작합니다:
 
-> "#{issue_number} Issue 를 파악하고, 관련 코드를 분석한 뒤, 구현 계획을 재정비하고, 구현하고, 테스트까지 진행해 줘."
+> "#{issue_number} Issue 를 파악하고, 관련 코드를 분석한 뒤, 구현 계획을 재정비하고, 구현하고, 테스트하고, 자체 리뷰까지 진행해 줘."
 
 ### Phase 1: Issue 파악
 ```bash
@@ -65,7 +65,17 @@ gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state
 1. 변경 코드 영역의 테스트 실행 (명령은 프로젝트 CLAUDE.md 의 "Common Commands" / "Testing" 섹션 참조)
 2. 신규 기능 / 버그 수정 시 검증 테스트 추가 후 실행
 3. 실패 시 **Phase 5 로 돌아가 수정**. 통과까지 Phase 5↔6 루프
-4. 통과 시 곧바로 Phase 7 (사용자 확인 불필요)
+4. 통과 시 곧바로 Phase 6.5 (사용자 확인 불필요)
+
+### Phase 6.5: 자체 리뷰
+
+`ticket-review` 스킬을 인자 없이 호출 → 현재 worktree 의 미커밋 변경사항을 3축 (기능 / 문법 / 품질) 으로 검토.
+
+1. Clear 항목은 ticket-review 가 즉시 수정
+2. 수정으로 코드가 바뀌었으면 Phase 6 의 테스트 재실행
+3. Needs review 항목이 **없으면** 멈추지 않고 Phase 7 로 진행. **있으면** 표로 제시하고 사용자 응답을 받아 반영 — 자동 파이프라인에서 유일하게 허용되는 대기 지점
+
+중점 축: 주석 정책 (전역 CLAUDE.md 5절), 변수·함수·클래스 네이밍, 프로젝트 코딩 컨벤션·포맷.
 
 ### Phase 7: 작업 보고 (자동 완료 처리 금지)
 
@@ -76,6 +86,7 @@ gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state
    - 구현 완료된 항목 (Implementation Plan Phase 단위) + Acceptance Criteria 충족 여부 (옵셔널 섹션은 있는 경우만)
    - 변경된 파일 목록
    - 빌드/테스트 결과 요약
+   - 자체 리뷰 결과 (즉시 수정 건수, 보류 항목)
    - 후속 작업 후보 (현재 Issue 범위 밖에서 발견한 명백한 이슈가 있을 때만 짧게 1-3 줄)
    - 다음 단계 안내: "완료 처리는 `/ticket-complete {issue-number}` 또는 '완료해줘'·'마무리해줘' 로 명시 요청해 주세요."
 2. **절대 자동으로 ticket-complete 를 실행하지 않습니다.**
