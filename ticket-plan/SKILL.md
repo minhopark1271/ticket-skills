@@ -168,7 +168,6 @@ gh issue create \
 - 라벨은 카테고리 (필수 1개) + 우선순위 (medium 이면 생략) + 프로젝트 고유 라벨 (있는 경우) 조합
 - `--body-file` 사용 권장 (긴 본문/특수문자 안전)
 - `--repo` 명시 권장 (worktree 등 cwd 가 main repo 가 아닐 때 안전)
-- body 최하단에 `## History` + `created` 한 줄 포함 (STYLE.md "History · 세션 서명")
 
 **보드 동기화**: config 에 `board` 가 있으면 Issue 생성 직후 `Set-BoardStatus({N}, backlog)` (CONFIG.md "프로젝트 보드 Status 동기화") 실행. 복수 생성(Step 4-Multi)은 각 Issue 마다. 보드 미설정이면 skip.
 
@@ -177,7 +176,7 @@ gh issue create \
 1. **의존성 순서대로** 순차 생성. 앞 Issue 번호를 다음 Issue 의 `## Related` 에 `#{앞번호}` 로 참조
 2. **모든 분할 Issue 의 `## Original Request`** 에 동일한 원본 프롬프트 인용
 3. **작업 분배**: 전체 작업을 각 Issue 의 Implementation Plan Phase 로 배분 (중복 금지)
-4. 생성 후 각 Issue body 를 `gh issue edit {N} --body-file ...` 로 상호 참조 보강 + 각 body `## History` 에 `edited` 한 줄
+4. 생성 후 각 Issue body 를 `gh issue edit {N} --body-file ...` 로 상호 참조 보강
 
 분할 그룹 추적은 라벨 `split-group:{대표번호}` 를 별도 생성해 묶거나, Issue body 의 `## Related` 에 명시적으로 기록.
 
@@ -204,7 +203,7 @@ gh issue list --repo "${project.repo}" --search "{키워드 in:title,body}" --st
 
 #### Step 5: Issue 생성 또는 업데이트
 1. 신규: 모드 1 의 Step 4 (또는 4-Multi)
-2. 업데이트: `gh issue edit {N} --body-file ...` (`## History` 에 `edited` 한 줄) 또는 `gh issue comment {N} --body-file ...` (최하단 세션 서명 footer)
+2. 업데이트: `gh issue edit {N} --body-file ...` 또는 `gh issue comment {N} --body-file ...`
 3. 모든 신규 Issue body 에 `source: {문서 경로}` 한 줄을 `## Background` 인용 형태로 포함
 
 ### 모드 3: 기존 계획에서 생성 (.plan.md)
@@ -266,7 +265,7 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 
 #### Step R3: Issue 전문 브리핑
 
-`gh issue view {N} --repo "${project.repo}" --json title,body,labels,url` 로 가져온 후, `##` 헤더 기준 섹션별 발췌. 본문 5줄 초과 시 핵심 1-3 줄 요약. Implementation Plan 은 Phase 단위 유지. Original Request 는 원문 인용. 옵셔널 섹션 없으면 생략. **History 는 발췌 · 리뷰 대상에서 제외** (기계 기록).
+`gh issue view {N} --repo "${project.repo}" --json title,body,labels,url` 로 가져온 후, `##` 헤더 기준 섹션별 발췌. 본문 5줄 초과 시 핵심 1-3 줄 요약. Implementation Plan 은 Phase 단위 유지. Original Request 는 원문 인용. 옵셔널 섹션 없으면 생략.
 
 브리핑 후 바로 Step R4 로 진행.
 
@@ -335,7 +334,7 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 gh issue edit {N} --repo "${project.repo}" --body-file /tmp/issue-body-updated.md
 ```
 
-수정된 본문은 직접 변경 + 연관 변경을 **모두** 누락 없이 반영. 라벨 변경이 있으면 `--add-label` / `--remove-label` 추가. 기존 `## History` 보존 + `edited` 한 줄.
+수정된 본문은 직접 변경 + 연관 변경을 **모두** 누락 없이 반영. 라벨 변경이 있으면 `--add-label` / `--remove-label` 추가.
 
 **보드 동기화**: config 에 `board` 가 있으면 리뷰 반영 완료 시점에 `Set-BoardStatus({N}, ready)` (CONFIG.md) 실행. 보드 미설정이면 skip.
 
@@ -379,9 +378,9 @@ worktree 생성을 원하지 않으면 스킵.
 
 ## Template (Issue body)
 
-Issue body 는 **필수 5 섹션 + 옵셔널 4 섹션** 구조. 옵셔널은 필요할 때만 작성 (빈 섹션 금지). `## Design` 은 Step 2.5 트리거 해당 시 **조건부 필수**.
+Issue body 는 **필수 4 섹션 + 옵셔널 4 섹션** 구조. 옵셔널은 필요할 때만 작성 (빈 섹션 금지). `## Design` 은 Step 2.5 트리거 해당 시 **조건부 필수**.
 
-**필수**: Original Request / Goal / Background / Technical Details / History (최하단 고정)
+**필수**: Original Request / Goal / Background / Technical Details
 **옵셔널**: Design (Step 2.5 트리거 시 필수) / Implementation Plan / Acceptance Criteria / Related
 
 **Technical Details 는 `as-is` / `to-be` / `not-to-be` 3 파트**. 현재 상태와 변경 방향이 한 목록에 섞이면 불릿마다 시점이 바뀌어 무엇이 사실이고 무엇이 결정인지 구분되지 않습니다. 내용 없는 파트는 소절째 생략 (신규 코드면 `as-is` 생략). 3 파트에 담기지 않는 내용만 다른 포맷 (표 · 코드 블록) 또는 규칙 없는 나열 — 예: 원인 미확정 조사 티켓, 계약 변경이 아닌 설정 · 의존성 목록.
@@ -467,14 +466,7 @@ def core_op(x: T, *, opt: U = DEFAULT, retries: int = 3) -> R:
 - [WebSocket Flow Analysis](${wiki.url_prefix}115-1-websocket-flow-analysis) — 분석 문서 (wiki URL 사용; Issue body 에서는 `[[]]` 미동작)
 - `path/to/relevant/file.py`
 - 브랜치 `feat/foo` (base `feat/bar`)   <!-- 계획이 브랜치명을 확정한 경우만. 형식 고정 — CONFIG.md "브랜치 해석" -->
-
-<!-- ── 이하 필수: body 최하단 고정 ── -->
-
-## History
-- `2026-08-12T14:32+09:00` · created · ticket-plan · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`
 ```
-
-History 는 생성 시 `created` 한 줄, 이후 body 를 고칠 때마다 `edited` 한 줄 append. 세션 ID 뒤 변경 서술 금지 (남길 때도 명사구 3개 이하). 상세: `STYLE.md`.
 
 **상호 링크 규칙**:
 - Issue → Issue: `#123` (자동 링크)
@@ -529,12 +521,9 @@ History 는 생성 시 `created` 한 줄, 이후 body 를 고칠 때마다 `edit
 - 가격 변동이 500ms 이내 대시보드 반영
 - 연결 끊김 시 자동 복구
 - 장시간 실행 (24h+) 시 메모리 leak 없음
-
-## History
-- `2026-08-12T14:32+09:00` · created · ticket-plan · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`
 ```
 
-### 예시 2: 버그 픽스 (필수 5 만)
+### 예시 2: 버그 픽스 (필수 4 만)
 
 `gh issue create --repo "${project.repo}" --title "Fix LSTM Memory Leak During Training" --label "bugfix,priority:urgent" --body-file /tmp/issue.md`
 
@@ -551,10 +540,6 @@ LSTM 학습이 200 epoch 이상 진행되어도 메모리가 안정 유지되도
 ## Technical Details
 - 의심 지점: epoch 사이 `K.clear_session()` 누락
 - 검증: `tracemalloc` 으로 200 epoch 메모리 추세 측정
-
-## History
-- `2026-08-12T09:07+09:00` · created · ticket-plan · MinhoWindowPC · `df10f8c9-7204-4eca-86aa-d8fe0a0b0fa4`
-- `2026-08-12T11:20+09:00` · edited · ticket-implement · MinhoWindowPC · `a3f1c802-55e9-4d1b-9c7a-2b6e0f4d8813`
 ```
 
 **3 파트 미적용 사례**: 원인이 미확정이라 `as-is` (무엇이 사실인가) 와 `to-be` (무엇을 바꾸는가) 가 아직 갈리지 않음. 조사 결과가 나오면 3 파트로 재작성.
@@ -573,7 +558,6 @@ PR 생성 형식은 `ticket-complete` Step 4 참조. 핵심:
 - Implementation Plan Phase 는 작고 체크 가능한 단위
 - Related 에 코드 파일 경로 + Issue/Wiki 링크 혼재 허용
 - 옵셔널 섹션은 필요할 때만, 빈 섹션 금지
-- `## History` 는 body 최하단 필수 — 편집마다 한 줄
 - 우선순위 medium 은 라벨 없이 default
 - 작성 후 한 번 더 사용자 확인 → 그 다음 worktree 생성
 - 분할 시 의존성을 본문 `## Related` 와 라벨 `split-group:*` 둘 다로 추적

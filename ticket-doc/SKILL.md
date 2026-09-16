@@ -138,7 +138,6 @@ git clone ${wiki.repo_url} ${wiki.clone_path}
 3. **구조화**: 표, 코드 블록, 다이어그램 적극 활용
 4. **데이터 보존**: 수치, 파라미터, 설정값 등 재현에 필요한 정보 모두 포함
 5. 파일 저장 위치: `${wiki.clone_path}/{N}-{seq}-{title-kebab}.md`
-6. **History**: 페이지 최하단 `## History` 에 `created` 한 줄. 기존 페이지 수정이면 기존 줄 보존 + `edited` 한 줄. **세션 ID 뒤 변경 서술 금지** — 남길 때도 명사구 3개 이하. 포맷 · 명령: `~/.claude/skills/ticket-plan/STYLE.md` "History · 세션 서명"
 
 ### Step 4: 상호 참조 링크 (필수 — 빠짐없이 실행)
 
@@ -158,17 +157,13 @@ gh issue edit {N} --repo "${project.repo}" --body-file /tmp/issue-updated.md
 ```markdown
 - [WebSocket Flow Analysis](${wiki.url_prefix}115-1-websocket-flow-analysis) — 분석 문서
 ```
-같은 body 의 `## History` 에 `edited` 한 줄 (스킬 = `ticket-doc`).
 
-**자동 (ticket-implement) 또는 독립 모드인 경우**: Issue comment 로 추가 (세션 서명 footer 포함)
+**자동 (ticket-implement) 또는 독립 모드인 경우**: Issue comment 로 추가
 ```bash
 gh issue comment {N} --repo "${project.repo}" --body-file /tmp/doc-link.md
 ```
 ```markdown
 관련 문서 추가: [WebSocket Flow Analysis](${wiki.url_prefix}115-1-websocket-flow-analysis)
-
----
-<sub>ticket-doc · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`</sub>
 ```
 
 #### 4-3. 문서 ↔ 문서 (양방향)
@@ -176,7 +171,7 @@ gh issue comment {N} --repo "${project.repo}" --body-file /tmp/doc-link.md
 - 같은 Issue 의 기존 wiki 페이지 확인: `ls ${wiki.clone_path}/{N}-*.md`
 - 기존 문서가 있으면:
   1. **새 문서 → 기존 문서**: 새 문서 상단에 `> 기반 문서: [[{기존 페이지 파일명}]]` (wiki 내부에서는 `[[Page-Name]]` syntax 작동)
-  2. **기존 문서 → 새 문서**: 기존 문서의 `## 후속 작업` 또는 본문 말미에 새 문서 링크 추가 (`[[새-페이지명]]`) + 그 문서의 `## History` 에 `edited` 한 줄
+  2. **기존 문서 → 새 문서**: 기존 문서의 `## 후속 작업` 또는 본문 말미에 새 문서 링크 추가 (`[[새-페이지명]]`)
 - 다른 Issue 의 문서라도 내용상 관련이 있으면 양방향 링크 추가
 
 **Wiki 내부 링크 syntax**:
@@ -189,13 +184,10 @@ gh issue comment {N} --repo "${project.repo}" --body-file /tmp/doc-link.md
 - [ ] Issue 의 `## Related` 또는 comment 에 wiki URL 추가됨
 - [ ] 같은 Issue 의 기존 wiki 페이지에 새 문서 링크 추가됨 (기존 문서 있는 경우)
 - [ ] 새 문서에 기존 wiki 페이지 링크 포함됨 (기존 문서 있는 경우)
-- [ ] 이번에 쓴 모든 산출물에 세션 기록 (문서 · Issue body → `## History`, comment → footer)
 
 ### Step 5: Wiki 로컬 commit — 드래프트 (push 안 함)
 
 문서는 **로컬 `.wiki` 클론에 commit 까지만** 하고 **push 하지 않습니다** (= 드래프트). 발행(push)은 Step 6 에서 명시적으로만 일어납니다.
-
-commit 전 이번 변경분의 `## History` 줄이 반영돼 있는지 확인.
 
 ```bash
 cd ${wiki.clone_path}
@@ -208,7 +200,7 @@ cd -
 
 ### Step 6: 발행 — 명시적 push (드래프트 → 공개)
 
-로컬 드래프트를 GitHub Wiki 에 실제 공개하는 단계. **명시적 트리거로만** 실행합니다. push 는 내용 변경이 아니므로 **History 줄을 추가하지 않습니다**.
+로컬 드래프트를 GitHub Wiki 에 실제 공개하는 단계. **명시적 트리거로만** 실행합니다.
 
 | 트리거 | 발행 주체 |
 |---|---|
@@ -278,9 +270,6 @@ cd -
 ## 참고 자료
 
 - {레퍼런스 링크 또는 문서}
-
-## History
-- `2026-08-12T14:32+09:00` · created · ticket-doc · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`
 ```
 
 ### 템플릿 B: 구현/분석 단계 문서
@@ -328,9 +317,6 @@ cd -
 
 - {후속 작업 1}
 - {후속 작업 2}
-
-## History
-- `2026-08-12T14:32+09:00` · created · ticket-doc · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`
 ```
 
 ### 템플릿 C: 독립 문서
@@ -375,12 +361,7 @@ cd -
 
 - [ ] {액션 1}
 - [ ] {액션 2}
-
-## History
-- `2026-08-12T14:32+09:00` · created · ticket-doc · MinhoWindowPC · `6204fbb6-3a3f-4494-8ed6-aedba0a33410`
 ```
-
-**3 템플릿 공통**: `## History` 는 페이지 최하단 필수.
 
 ## 작성 가이드라인
 
@@ -395,7 +376,6 @@ cd -
 ### 문서 품질 체크리스트
 
 - [ ] 본문 `> 관련 Issue: #{N}` 한 줄 포함
-- [ ] 최하단 `## History` 에 이번 작성/수정 줄 포함
 - [ ] Issue 의 Related (body 또는 comment) 에 이 wiki URL 추가됨
 - [ ] 같은 Issue 의 기존 wiki 페이지에 이 문서 링크 추가됨 (해당 시)
 - [ ] 이 문서에 기존 관련 wiki 페이지 링크 포함 (해당 시)
@@ -443,4 +423,3 @@ GitHub(Issue body·comment·Wiki)는 GFM 이라 물결 하나짜리 `~텍스트~
 - 독립 모드로 브레인스토밍 문서 작성 후, 실행할 아이디어가 나오면 `ticket-plan` 으로 새 Issue 생성 권유
 - **Type B 의 후속 작업**: 단순 리스트로만 — 다른 Issue 를 자동 수정하거나 라벨/comment 를 추가하지 않습니다 (정보량 폭증 방지)
 - Wiki repo 는 main repo 와 별도 — **자동 push 안 함**. 발행은 명시적 단계(Step 6)에서만 (드래프트 → 발행 분리)
-- `## History` 는 페이지 최하단 고정. 내용을 고친 문서마다 한 줄 (push 시엔 추가 안 함)
