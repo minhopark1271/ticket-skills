@@ -91,7 +91,7 @@ gh label create "infra" --color "BFD4F2" --description "인프라 / DevOps" --fo
 
 #### Step 2.5: 설계 평가 (조건부 필수)
 
-Step 2 의 분석 결과, 아래 트리거 중 **하나 이상 해당**하면 Issue body 에 **`## Design` 섹션을 필수로 작성**합니다.
+Step 2 의 분석 결과, 아래 트리거 중 **하나 이상 해당**하면 설계를 도출한 뒤 **wiki 페이지로 작성**하고, Issue 의 `## 변경` 에는 **채택안 1줄 + 기각 1줄 + wiki 링크** 만 남깁니다.
 
 | 트리거 | 예 |
 |---|---|
@@ -108,9 +108,11 @@ Step 2 의 분석 결과, 아래 트리거 중 **하나 이상 해당**하면 Is
 2. **대안 도출** — **최소 2개 이상** 설계 후보를 작성. 네이티브/공식 API 방식을 항상 한 후보로 포함.
 3. **대안 비교** — 각 후보의 장점·단점·복잡도·확장성·기존 코드와의 정합성을 표로 평가.
 4. **최적 선택** — 어떤 후보를 채택할지 + **선택 근거** 명시. 후순위 대안은 기각 사유 1줄.
-5. **`## Design` 작성** — 아래 Template 의 sub-section 형식 (현황 분석 / 대안 비교 / 선택 + 근거 / 자료 구조 / 클래스 hierarchy / 핵심 시그니처) 으로 Issue body 에 포함.
+5. **산출물 배치**:
+   - **wiki** (문서화 단계에서 ticket-doc Type A) — 대안 비교 표 · 자료 구조 · 클래스 hierarchy · 핵심 시그니처 · 상세 로직
+   - **Issue `## 변경`** — `**방안 X 채택** — {근거 1줄}` + `({기각안}: {기각 사유})` + wiki 링크
 
-**설계가 길어 Issue body 만으로 부족할 때**: 문서화 단계에서 ticket-doc Type A 자동 호출 → wiki 페이지에 상세 작성. 단, Issue body 의 `## Design` 에는 항상 **요약 + 선택 근거 + 핵심 시그니처** 는 남기고, 풀 상세만 wiki 로 위임.
+자료 구조 · hierarchy · 시그니처 코드 블록을 Issue body 에 붙여넣지 않습니다. 이 셋은 wiki 소유입니다.
 
 #### Step 3: 티켓 분할 평가
 
@@ -174,7 +176,7 @@ gh issue create \
 #### Step 4-Multi: 복수 Issue 생성
 
 1. **의존성 순서대로** 순차 생성. 앞 Issue 번호를 다음 Issue 의 `## Related` 에 `#{앞번호}` 로 참조
-2. **모든 분할 Issue 의 `## Original Request`** 에 동일한 원본 프롬프트 인용
+2. **모든 분할 Issue 의 `## 현상`** 에 동일한 원본 프롬프트 인용
 3. **작업 분배**: 전체 작업을 각 Issue 의 Implementation Plan Phase 로 배분 (중복 금지)
 4. 생성 후 각 Issue body 를 `gh issue edit {N} --body-file ...` 로 상호 참조 보강
 
@@ -204,7 +206,7 @@ gh issue list --repo "${project.repo}" --search "{키워드 in:title,body}" --st
 #### Step 5: Issue 생성 또는 업데이트
 1. 신규: 모드 1 의 Step 4 (또는 4-Multi)
 2. 업데이트: `gh issue edit {N} --body-file ...` 또는 `gh issue comment {N} --body-file ...`
-3. 모든 신규 Issue body 에 `source: {문서 경로}` 한 줄을 `## Background` 인용 형태로 포함
+3. 모든 신규 Issue body 에 `source: {문서 경로}` 한 줄을 `## 현상` 의 인용 블록에 포함
 
 ### 모드 3: 기존 계획에서 생성 (.plan.md)
 
@@ -221,11 +223,11 @@ gh issue list --repo "${project.repo}" --search "{키워드 in:title,body}" --st
 #### Step 4: Issue 생성
 1. 단일/복수에 따라 모드 1 의 Step 4 또는 4-Multi
 2. 매핑:
-   - Plan 의 objective → **Goal**
-   - Plan 의 context → **Background**
-   - Plan 의 considerations → **Technical Details**
+   - Plan 의 context → **현상** · **문제**
+   - Plan 의 objective → **기대**
+   - Plan 의 considerations → **현재 구조** · **범위**
    - Plan 의 steps → **Implementation Plan** Phase 들 (옵셔널)
-   - Plan 의 files → **Related** (파일 경로)
+   - Plan 의 files → **범위** · **Related** (파일 경로)
 3. Issue body 에 `source: .plan.md` 한 줄 포함
 4. Issue 생성 성공 후 `.plan.md` 삭제/아카이브 (사용자 확인)
 
@@ -234,18 +236,18 @@ gh issue list --repo "${project.repo}" --search "{키워드 in:title,body}" --st
 Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 
 **자동 호출 판단 기준** — 아래 중 하나 이상 해당 시 `ticket-doc` 호출:
+- **Step 2.5 트리거 해당** — 설계 상세 (대안 표 · 자료 구조 · hierarchy · 시그니처) 는 항상 wiki 소유
+- Issue body 가 50줄 상한을 넘는 경우 — 초과분을 wiki 로 이관
 - 배경 조사/코드 분석이 Issue body 에 다 담기엔 상세한 경우
-- 설계 대안 비교가 여러 개인 경우
 - 알고리즘 수식이나 상세 플로우 설명 필요
 - 데이터 흐름 / 아키텍처 다이어그램 수준 포함
-- Step 2.5 의 `## Design` 상세 (대안 표·자료구조·hierarchy·시그니처) 가 Issue body 1 화면 분량을 초과하는 경우 — Issue body 의 `## Design` 에는 요약 + 선택 근거 + 핵심 시그니처만 남기고, 풀 설계는 wiki 에 위임
 
 **실행 순서**:
 1. `ticket-doc` Type A 호출 → GitHub Wiki 페이지 **드래프트** 생성 (로컬 커밋만; **push 안 함**)
 2. 페이지명: `{issue-number}-{seq}-{analysis-title}` (예: `115-1-websocket-flow-analysis`)
 3. 생성된 wiki 페이지 URL 을 Issue body 의 `## Related` 섹션에 추가 (URL 은 파일명 기반이라 발행 전에도 확정 — 실제 발행은 `ticket-complete` 에서)
 
-**해당 없으면** 스킵. Background/Technical Details 에 충분히 담긴 경우 별도 wiki 페이지 불필요.
+**해당 없으면** 스킵. 6 섹션 상한 안에 담긴 경우 별도 wiki 페이지 불필요.
 
 ---
 
@@ -265,7 +267,7 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 
 #### Step R3: Issue 전문 브리핑
 
-`gh issue view {N} --repo "${project.repo}" --json title,body,labels,url` 로 가져온 후, `##` 헤더 기준 섹션별 발췌. 본문 5줄 초과 시 핵심 1-3 줄 요약. Implementation Plan 은 Phase 단위 유지. Original Request 는 원문 인용. 옵셔널 섹션 없으면 생략.
+`gh issue view {N} --repo "${project.repo}" --json title,body,labels,url` 로 가져온 후, `##` 헤더 기준 섹션별 전문 표시 — body 50줄 상한이므로 요약하지 않습니다. Implementation Plan 은 Phase 단위 유지. 옵셔널 섹션 없으면 생략.
 
 브리핑 후 바로 Step R4 로 진행.
 
@@ -273,14 +275,14 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 
 각 섹션을 **하나씩 순서대로** 리뷰. 한 번에 하나의 섹션만 보여주고 피드백 받은 후 다음으로.
 
-**리뷰 순서** (필수 4 + 옵셔널 4; 옵셔널은 있는 경우만):
-1. Original Request (확인만)
-2. Goal
-3. Background
-4. Technical Details
-5. Design — Step 2.5 트리거 시 필수 (sub-section 별로: 현황 분석 / 대안 비교 / 선택 + 근거 / 자료 구조 / hierarchy / 핵심 시그니처)
-6. Implementation Plan — 있는 경우만 (Phase 별)
-7. Acceptance Criteria — 있는 경우만
+**리뷰 순서** (필수 6 + 옵셔널 2; 옵셔널은 있는 경우만):
+1. 현상 (원문 인용은 확인만)
+2. 범위
+3. 현재 구조
+4. 문제
+5. 변경 — Step 2.5 트리거 시 채택 근거 · 기각 사유 · wiki 링크가 있는지 함께 확인
+6. 기대
+7. Implementation Plan — 있는 경우만 (Phase 별)
 8. Related — 있는 경우만
 
 **섹션 리뷰 출력 형식:**
@@ -319,13 +321,14 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 
 | 트리거 | 연동 액션 |
 |---|---|
-| **Goal** 변경 | → Design / Implementation Plan / Acceptance Criteria 정합성 확인 |
-| **Technical Details** 변경 | → Design 의 현황 분석·선택 근거 / Implementation Plan Phase Notes 반영 |
-| **Design** 의 자료 구조 / hierarchy / 시그니처 변경 | → Implementation Plan Phase Files / Notes 동기화. Acceptance Criteria 의 검증 대상이 새 시그니처 / 자료구조와 정합한지 확인 |
-| **Design** 의 선택 변경 (방안 교체) | → 대안 비교 표 갱신 + 기각 사유 보정 + Implementation Plan 재구성 |
-| **Implementation Plan** Phase 추가/삭제/수정 | → Acceptance Criteria 검증대상 / Related 파일 동기화. Design 의 Files 정합성 확인 |
-| **Acceptance Criteria** 추가/수정 | → Implementation Plan 검증대상 존재 확인 |
-| **파일 경로** 추가/삭제 | → Related 업데이트 |
+| **현상** / **문제** 변경 | → 변경 · 기대 정합성 확인 |
+| **범위** 변경 | → 현재 구조 · 변경 · Implementation Plan Files 동기화 |
+| **현재 구조** 변경 | → 문제의 인과와 변경의 전제 재확인. wiki 설계 문서의 현황 분석 반영 |
+| **변경** 의 채택안 교체 | → wiki 의 대안 비교 · 자료 구조 · 시그니처 갱신 + 기각 사유 보정 + Implementation Plan 재구성 |
+| **변경** 항목 추가/삭제 | → 기대 · Implementation Plan Phase 동기화 |
+| **기대** 추가/수정 | → 변경 에 대응 항목이 있는지 확인 |
+| **Implementation Plan** Phase 추가/삭제/수정 | → 기대의 검증 대상 · Related 파일 동기화 |
+| **파일 경로** 추가/삭제 | → 범위 · Related 업데이트 |
 
 연관 변경 없으면 "연관 변경 없음" 표기.
 
@@ -378,88 +381,59 @@ worktree 생성을 원하지 않으면 스킵.
 
 ## Template (Issue body)
 
-Issue body 는 **필수 4 섹션 + 옵셔널 4 섹션** 구조. 옵셔널은 필요할 때만 작성 (빈 섹션 금지). `## Design` 은 Step 2.5 트리거 해당 시 **조건부 필수**.
+Issue body 는 **필수 6 섹션 + 옵셔널 2 섹션**. 각 섹션은 한 가지 질문에만 답하고, 상한을 넘기면 줄이거나 wiki 로 이관합니다 (늘려 쓰지 않음).
 
-**필수**: Original Request / Goal / Background / Technical Details
-**옵셔널**: Design (Step 2.5 트리거 시 필수) / Implementation Plan / Acceptance Criteria / Related
+| 섹션 | 답하는 질문 | 상한 |
+|---|---|---|
+| `## 현상` | 지금 무슨 일이 일어나고 있나 | 원문 인용 + 3줄 |
+| `## 범위` | 무엇을 건드리고 무엇을 안 건드리나 | 각 2-4 bullet |
+| `## 현재 구조` | 건드릴 코드의 현재 계약은 무엇인가 | 5 bullet |
+| `## 문제` | 그 구조가 왜 현상을 만드나 | 3줄 |
+| `## 변경` | 어떻게 바꾸나 | 7 bullet |
+| `## 기대` | 무엇이 되면 끝인가 | 4 bullet |
+| `## Implementation Plan` (옵셔널) | 어떤 순서로 바꾸나 | Phase 당 Files · Changes 2줄 (Notes 는 엣지 케이스 있을 때만) |
+| `## Related` (옵셔널) | 무엇과 엮여 있나 | 제한 없음 |
 
-**Technical Details 는 `as-is` / `to-be` / `not-to-be` 3 파트**. 현재 상태와 변경 방향이 한 목록에 섞이면 불릿마다 시점이 바뀌어 무엇이 사실이고 무엇이 결정인지 구분되지 않습니다. 내용 없는 파트는 소절째 생략 (신규 코드면 `as-is` 생략). 3 파트에 담기지 않는 내용만 다른 포맷 (표 · 코드 블록) 또는 규칙 없는 나열 — 예: 원인 미확정 조사 티켓, 계약 변경이 아닌 설정 · 의존성 목록.
+**body 전체 50줄 상한**. 초과하면 `ticket-doc` Type A 로 wiki 페이지를 만들고 Issue 엔 결론 + 링크만 남깁니다.
+
+**시점 분리가 핵심** — `현재 구조` 는 사실, `변경` 은 결정. 한 목록에 섞이면 불릿마다 시점이 바뀌어 무엇이 사실이고 무엇이 결정인지 구분되지 않습니다. `범위` 의 "안 건드림" 이 범위 경계 (타 Issue 소유 · 의도적 미수정 · 후속 후보) 를 담습니다.
+
+**원인 미확정 조사 티켓**: `현재 구조` · `문제` · `변경` 이 아직 갈리지 않음. `현상` · `범위` · `기대` 만 쓰고 나머지는 생략, 조사 후 재작성.
 
 ```markdown
-## Original Request
+## 현상
 > {사용자가 입력한 원래 프롬프트를 그대로 인용}
 
-## Goal
-{달성하고자 하는 결과를 명확히 기술}
+{지금 관측되는 상태. 3줄 이내}
 
-## Background
-{왜 필요한가? 컨텍스트와 동기}
+## 범위
+- 건드림: {파일 · 모듈 · 심볼}
+- 안 건드림: {범위 경계 — 타 Issue 소유 · 의도적 미수정 · 후속 후보}
 
-## Technical Details
+## 현재 구조
+- `{심볼}` — {현재 계약 · 동작. 결정을 읽는 데 필요한 사실만}
 
-### as-is
-{건드릴 코드의 현재 계약 · 구조. 결정을 읽는 데 필요한 사실만}
+## 문제
+{현재 구조가 현상을 만드는 인과. 3줄 이내}
 
-### to-be
-{본 티켓이 바꾸는 것. 계약 · 규칙 단위}
+## 변경
+**방안 {X} 채택** — {근거 1줄}                              <!-- Step 2.5 트리거 시만. 아니면 이 두 줄 생략 -->
+({기각안}: {기각 사유 1줄}) → [설계 상세](${wiki.url_prefix}{Page-Name})
 
-### not-to-be
-{바꾸지 않는 것 — 범위 경계, 타 Issue 소유, 의도적 미수정, 후속 후보}
+- {바꾸는 계약 · 규칙}
+
+## 기대
+- {완료 판정 기준}
 
 <!-- ── 이하 옵셔널: 필요한 경우만 ── -->
-
-## Design  <!-- Step 2.5 트리거 (자료구조/논리구조/hierarchy/파라미터 설계) 시 필수 -->
-
-### 현황 분석
-- {기존 코드/자료 구조의 핵심 요약}
-- {영향받는 파일/심볼/모듈}
-
-### 대안 비교
-
-| 방안 | 핵심 | 장점 | 단점 |
-|---|---|---|---|
-| A. {이름} | {1줄 요약} | {1-2 항목} | {1-2 항목} |
-| B. {이름} | {1줄 요약} | {1-2 항목} | {1-2 항목} |
-
-### 선택 — 방안 {X}
-
-**선택 근거**: {2-3 줄. 기존 코드와의 정합성/확장성/복잡도 측면}
-**기각된 대안**: {타 방안 1줄 기각 사유}
-
-#### 자료 구조
-```python
-@dataclass
-class Example:
-    field1: Type   # 의미/단위
-    field2: Type | None = None
-```
-
-#### 컴포넌트 / 클래스 Hierarchy
-```
-ModuleA
-├── ClassRoot           (책임: ...)
-│   ├── ChildA          (책임: ...)
-│   └── ChildB          (책임: ...)
-└── HelperFunc          (책임: ...)
-```
-
-#### 핵심 시그니처 / 파라미터
-```python
-def core_op(x: T, *, opt: U = DEFAULT, retries: int = 3) -> R:
-    """간단 설명. 핵심 인자 정책 (기본값 / None 의미 / 예외)."""
-```
 
 ## Implementation Plan
 - [ ] **Phase 1: {Phase 제목}**
   - Files: `path/to/file.py`
   - Changes: {구체 수정 내용}
-  - Notes: {엣지 케이스, 의존성}
 - [ ] **Phase 2: {Phase 제목}**
   - Files: `path/to/another.py`
   - Changes: {구체 수정 내용}
-
-## Acceptance Criteria
-{Implementation Plan 완료만으로 자명한 경우 생략. 구현 외 검증 기준이 있을 때만 작성}
 
 ## Related
 - #123 — 의존 / 관련 Issue
@@ -491,58 +465,61 @@ def core_op(x: T, *, opt: U = DEFAULT, retries: int = 3) -> R:
 
 본문:
 ```markdown
-## Original Request
+## 현상
 > 대시보드에 실시간 BTC 가격 업데이트가 필요해. WebSocket으로 처리하자.
 
-## Goal
-대시보드에서 BTC 가격을 WebSocket 기반 실시간 스트림으로 표시.
+대시보드 가격이 최대 30초 늦게 반영된다.
 
-## Background
-현재 30초 폴링 방식으로 가격을 가져온다. UX 개선을 위해 실시간 푸시로 전환.
+## 범위
+- 건드림: `src/data_collection/fetchers/`, API 스트림 엔드포인트
+- 안 건드림: REST 폴링 경로 — WebSocket 미지원 환경 fallback 으로 유지, 제거는 별건
 
-## Technical Details
+## 현재 구조
+- `PriceFetcher.poll()` — 30초 주기 REST 호출
+- 대시보드는 폴링 결과만 렌더, 푸시 수신 경로 없음
 
-### as-is
-- `PriceFetcher.poll()` 이 30 초 주기 REST 폴링, 대시보드는 폴링 결과를 렌더
+## 문제
+폴링 주기가 반영 지연의 하한. 주기를 줄이면 거래소 rate limit 에 걸린다.
 
-### to-be
-- `websockets` 라이브러리로 Binance WebSocket 가격 스트림 구독
-- 연결 끊김 시 exponential backoff 자동 재연결
+## 변경
+**방안 B 채택** — 기존 `Fetcher` 인터페이스를 그대로 구현해 호출부 무변경.
+(A. 별도 수집 프로세스: 배포·모니터링 대상 증가로 기각) → [설계 상세](${wiki.url_prefix}115-1-websocket-design)
 
-### not-to-be
-- REST 폴링 경로는 WebSocket 미지원 환경 fallback 으로 유지 — 제거는 별건
+- `websockets` 로 Binance 가격 스트림 구독
+- 끊김 시 exponential backoff 재연결
+- 스트림 장애 시 `PriceFetcher.poll()` 로 폴백
+
+## 기대
+- 가격 변동이 500ms 이내 대시보드 반영
+- 연결 끊김 시 자동 복구
+- 24h+ 실행 시 메모리 안정
 
 ## Implementation Plan
 - [ ] **Phase 1: WebSocket 클라이언트 구현**
   - Files: `src/data_collection/fetchers/binance_ws.py`
 - [ ] **Phase 2: API 스트림 엔드포인트 추가**
-
-## Acceptance Criteria
-- 가격 변동이 500ms 이내 대시보드 반영
-- 연결 끊김 시 자동 복구
-- 장시간 실행 (24h+) 시 메모리 leak 없음
 ```
 
-### 예시 2: 버그 픽스 (필수 4 만)
+### 예시 2: 원인 미확정 조사 티켓
 
 `gh issue create --repo "${project.repo}" --title "Fix LSTM Memory Leak During Training" --label "bugfix,priority:urgent" --body-file /tmp/issue.md`
 
 ```markdown
-## Original Request
+## 현상
 > 50 epoch 넘기면 OOM 떨어진다. 학습 중 메모리 누수 잡아줘.
 
-## Goal
-LSTM 학습이 200 epoch 이상 진행되어도 메모리가 안정 유지되도록 누수 제거.
+LSTM 학습이 50 epoch 이후 메모리 무한 증가, OOM 종료.
 
-## Background
-50 epoch 이후 메모리 무한 증가하다 OOM. 세션 정리 누락 의심.
+## 범위
+- 건드림: 학습 루프와 그 안의 세션 관리
+- 안 건드림: 모델 정의, 데이터 로더
 
-## Technical Details
-- 의심 지점: epoch 사이 `K.clear_session()` 누락
-- 검증: `tracemalloc` 으로 200 epoch 메모리 추세 측정
+## 기대
+- 200 epoch 실행 시 메모리 사용량 정상 상태 유지
+- `tracemalloc` 200 epoch 추세로 검증
+
+**원인 미확정** — `현재 구조` · `문제` · `변경` 은 조사 후 작성. 의심 지점: epoch 사이 `K.clear_session()` 누락.
 ```
-
-**3 파트 미적용 사례**: 원인이 미확정이라 `as-is` (무엇이 사실인가) 와 `to-be` (무엇을 바꾸는가) 가 아직 갈리지 않음. 조사 결과가 나오면 3 파트로 재작성.
 
 ## PR 컨벤션
 
@@ -553,8 +530,10 @@ PR 생성 형식은 `ticket-complete` Step 4 참조. 핵심:
 
 ## 권장 사항
 
-- Goal 은 결과 (outcome) 를 기술하지 활동 (activity) 을 적지 않습니다
-- Technical Details 는 as-is / to-be / not-to-be 3 파트 기본. 미적용은 3 파트가 성립하지 않을 때만
+- 현상 은 관측된 사실, 기대 는 결과 (outcome). 활동 (activity) 을 적지 않습니다
+- 현재 구조 는 사실, 변경 은 결정. 한쪽에 다른 쪽을 섞지 않습니다
+- 자료 구조 · hierarchy · 시그니처 코드 블록은 wiki 소유. Issue 엔 채택 근거 + 링크
+- 섹션 상한 초과 시 줄이거나 wiki 로 이관. 상한을 늘려 쓰지 않습니다
 - Implementation Plan Phase 는 작고 체크 가능한 단위
 - Related 에 코드 파일 경로 + Issue/Wiki 링크 혼재 허용
 - 옵셔널 섹션은 필요할 때만, 빈 섹션 금지

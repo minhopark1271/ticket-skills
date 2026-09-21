@@ -97,6 +97,7 @@ git clone ${wiki.repo_url} ${wiki.clone_path}
 - 문제 정의 및 배경 조사 결과
 - 관련 코드/아키텍처 분석
 - 설계 아이디어와 대안 비교
+- 자료 구조 · 클래스 hierarchy · 핵심 시그니처 (ticket-plan Step 2.5 의 설계 산출물은 Issue 가 아니라 여기가 소유)
 - 핵심 알고리즘/로직 설명
 - 데이터 흐름 및 의존성 분석
 - 참고 자료 및 레퍼런스
@@ -258,6 +259,32 @@ cd -
 |---|---|---|:---:|---|
 | {방식 A} | {장점} | {단점} | O/X | {선택/기각} |
 | {방식 B} | {장점} | {단점} | O/X | {선택/기각} |
+
+### 자료 구조
+
+```python
+@dataclass
+class Example:
+    field1: Type   # 의미/단위
+    field2: Type | None = None
+```
+
+### 컴포넌트 / 클래스 Hierarchy
+
+```
+ModuleA
+├── ClassRoot           (책임: ...)
+│   ├── ChildA          (책임: ...)
+│   └── ChildB          (책임: ...)
+└── HelperFunc          (책임: ...)
+```
+
+### 핵심 시그니처
+
+```python
+def core_op(x: T, *, opt: U = DEFAULT, retries: int = 3) -> R:
+    """간단 설명. 핵심 인자 정책 (기본값 / None 의미 / 예외)."""
+```
 
 ### 상세 로직
 

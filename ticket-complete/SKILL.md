@@ -173,7 +173,8 @@ config 에 `board` 가 있으면 `Set-BoardStatus({N}, done)` (CONFIG.md "프로
 Issue body 에 Implementation Plan 이 있으면:
 - 모든 `- [ ]` 항목을 `- [x]` 로 변경하여 `gh issue edit {N} --repo "${project.repo}" --body-file ...` 로 본문 업데이트
 - 실제 구현되지 않은 항목은 `(스킵: {사유})` 표기 후 체크
-- Acceptance Criteria 도 동일하게 처리
+
+`## 기대` 는 체크박스가 아니므로 body 를 고치지 않고, 9-3 comment 에서 항목별 충족 여부를 서술한다.
 
 #### 9-3. 구현 결과 comment 추가
 

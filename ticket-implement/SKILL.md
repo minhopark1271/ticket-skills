@@ -39,7 +39,7 @@ GitHub Issue 의 진행 상황을 업데이트합니다. 작업 시작, 진행 �
 ```bash
 gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state,url,comments
 ```
-1. body 의 Goal / Background / Technical Details / Design / Implementation Plan / Acceptance Criteria 섹션 확인 (옵셔널 섹션 부재 시 스킵)
+1. body 의 현상 / 범위 / 현재 구조 / 문제 / 변경 / 기대 + Implementation Plan (옵셔널) 섹션 확인. `변경` 에 wiki 링크가 있으면 설계 상세는 그 페이지에 있음
 2. 라벨에서 상태/우선순위/카테고리/컴포넌트 파악
 3. body 의 `## Related` 에 `#{N}` 으로 참조된 다른 Issue 가 있으면 `gh issue view` 로 간단히 확인
 4. `## Related` 의 브랜치 줄로 `${branch}`·`${base}` 확정 (CONFIG.md "브랜치 해석")
@@ -52,7 +52,7 @@ gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state
 4. 파악 내용을 사용자에게 짧게 요약 (수정 대상 파일/심볼 목록 + 영향 범위)
 
 ### Phase 3: 구현 계획 재정비
-1. Issue 의 Design / Implementation Plan / Acceptance Criteria 를 Phase 2 의 실제 코드 상태와 비교 (셋 다 옵셔널 — 없으면 Goal · Technical Details 기반)
+1. Issue 의 변경 / 기대 / Implementation Plan (+ 링크된 설계 wiki) 을 Phase 2 의 실제 코드 상태와 비교
 2. 차이가 있으면 구현 단계를 재구성 (어떤 순서로 어떤 파일을 수정할지)
 3. 발견된 이슈/제약/추가 작업 항목 정리
 4. 재정비된 계획을 사용자에게 짧은 단계 목록으로 제시 (3~7 단계 권장)
@@ -99,7 +99,7 @@ gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state
 완료 처리 (머지/정리) 는 사용자가 명시적으로 요청한 경우에만 진행.
 
 1. 사용자에게 보고:
-   - 구현 완료된 항목 (Implementation Plan Phase 단위) + Acceptance Criteria 충족 여부 (옵셔널 섹션은 있는 경우만)
+   - 구현 완료된 항목 (Implementation Plan 이 있으면 Phase 단위) + `## 기대` 항목별 충족 여부
    - 변경된 파일 목록 + (Phase 단위 커밋 운용이면) 커밋 목록 `git log --oneline ${base}..HEAD`
    - 빌드/테스트 결과 요약
    - 자체 리뷰 결과 (즉시 수정 건수, 보류 항목)
