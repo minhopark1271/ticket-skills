@@ -41,7 +41,8 @@ git -C $wt checkout --detach FETCH_HEAD
 - **`pr-` 접두**: Issue worktree (`${worktree.prefix}-{N}-{slug}`) 와 구분 — PR 번호와 Issue 번호는 다르다
 - **detached HEAD**: 로컬 브랜치를 만들지 않아 작성자 브랜치명과 충돌하지 않고, fork PR 도 같은 명령으로 받는다
 - **읽기는 전부 이 worktree 경로 기준**: 메인 worktree 의 파일은 PR 버전이 아니다
-- **검토 후 유지**: 재리뷰에 재사용. 정리는 사용자 요청 시 `ticket-complete` Step 7 절차 (링크 제거 후 `git worktree remove`)
+- **리뷰 의견 파일**: `$wt/review-pr-{N}.md` — 다른 에이전트 인계용 임시파일. 터미널 출력과 같은 내용, 재리뷰 시 덮어씀. untracked 로 두고 커밋하지 않음
+- **검토 후 유지**: 재리뷰·인계에 재사용. 정리는 사용자 요청 시 `ticket-complete` Step 7 절차 (링크 제거 후 `git worktree remove`)
 
 ## 검토 축
 
@@ -101,11 +102,11 @@ git -C $wt checkout --detach FETCH_HEAD
 2. **보드 동기화** — Issue 번호 N 을 해석할 수 있고 (PR 이면 `closingIssuesReferences`, 아니면 worktree 디렉토리명 `${worktree.prefix}-{N}-{slug}` · 현재 브랜치) config 에 `board` 가 있으면 `Set-BoardStatus({N}, in_review)` (CONFIG.md "프로젝트 보드 Status 동기화"). N 미상 또는 보드 미설정이면 skip
 3. **3축 검토** — 파일·hunk 마다 점검해 발견 항목 수집 (위치, 문제, 근거)
 4. **분류** — 발견 항목을 블록에 배정. 같은 원인의 항목은 하나로 병합
-5. **출력** — PR 코멘트에 그대로 붙일 수 있는 마크다운으로 출력하고 종료. PR 이면 의견 밖에 worktree 경로를 한 줄로 알림
+5. **출력** — PR 코멘트에 그대로 붙일 수 있는 마크다운으로 출력하고 종료. PR 이면 같은 내용을 리뷰 의견 파일로 저장하고, 의견 밖에 파일 경로를 한 줄로 알림
 
 ## 가드레일
 
-- **코드 수정 · PR 게시 금지**: Edit · commit · push · `gh pr review` / `gh pr comment` 는 사용자가 명시 요청할 때만
+- **코드 수정 · PR 게시 금지**: Edit · commit · push · `gh pr review` / `gh pr comment` 는 사용자가 명시 요청할 때만. 쓰는 파일은 리뷰 의견 파일 하나뿐
 - **검토 범위 최소화**: PR 이 만진 부분 + 직접 영향 범위만. 인접 코드의 기존 문제는 참고로만
 - **테스트 부재는 지적만**: 대신 작성하지 않음
 
