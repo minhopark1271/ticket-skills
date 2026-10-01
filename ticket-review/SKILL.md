@@ -22,7 +22,26 @@ PR 조회와 보드 동기화에 `gh` 를 쓰므로 `project.gh_account` 계정 
 3. **인자 없음**: 현재 working directory 의 미커밋 변경사항 (`git status`, `git diff`, untracked) — `ticket-implement` Phase 6.5 의 경로
 4. 변경사항이 비어 있으면 사용자에게 "어디를 검토할지" 묻기
 
-diff 밖 맥락 코드는 현재 브랜치가 PR head 면 직접 읽고, 아니면 `git fetch origin pull/{N}/head` 후 `git show FETCH_HEAD:{path}`. 사용자의 worktree 를 checkout 으로 바꾸지 않습니다.
+### PR worktree
+
+PR 은 전용 worktree 에 checkout 해서 검토합니다 — 현재 worktree 의 브랜치·미커밋 변경을 건드리지 않고 PR 버전의 파일을 읽기 위함.
+
+```bash
+wt=../${worktree.prefix}-pr-{N}
+
+# 최초
+git fetch origin pull/{N}/head
+git worktree add --detach $wt FETCH_HEAD
+
+# 이미 있으면 (재리뷰) 갱신 — FETCH_HEAD 는 worktree 별이라 fetch 도 그 안에서 한다
+git -C $wt fetch origin pull/{N}/head
+git -C $wt checkout --detach FETCH_HEAD
+```
+
+- **`pr-` 접두**: Issue worktree (`${worktree.prefix}-{N}-{slug}`) 와 구분 — PR 번호와 Issue 번호는 다르다
+- **detached HEAD**: 로컬 브랜치를 만들지 않아 작성자 브랜치명과 충돌하지 않고, fork PR 도 같은 명령으로 받는다
+- **읽기는 전부 이 worktree 경로 기준**: 메인 worktree 의 파일은 PR 버전이 아니다
+- **검토 후 유지**: 재리뷰에 재사용. 정리는 사용자 요청 시 `ticket-complete` Step 7 절차 (링크 제거 후 `git worktree remove`)
 
 ## 검토 축
 
@@ -78,11 +97,11 @@ diff 밖 맥락 코드는 현재 브랜치가 PR head 면 직접 읽고, 아니�
 
 ## 실행 단계
 
-1. **범위 확정** — 인자 / git 상태 / 사용자 질의로 대상 파일·hunk 결정. 변경된 라인 위주로 컨텍스트 파악 (Read, Grep, 심볼 단위는 Serena)
+1. **범위 확정** — 인자 / git 상태 / 사용자 질의로 대상 파일·hunk 결정. PR 이면 "PR worktree" 준비. 변경된 라인 위주로 컨텍스트 파악 (Read, Grep, 심볼 단위는 Serena)
 2. **보드 동기화** — Issue 번호 N 을 해석할 수 있고 (PR 이면 `closingIssuesReferences`, 아니면 worktree 디렉토리명 `${worktree.prefix}-{N}-{slug}` · 현재 브랜치) config 에 `board` 가 있으면 `Set-BoardStatus({N}, in_review)` (CONFIG.md "프로젝트 보드 Status 동기화"). N 미상 또는 보드 미설정이면 skip
 3. **3축 검토** — 파일·hunk 마다 점검해 발견 항목 수집 (위치, 문제, 근거)
 4. **분류** — 발견 항목을 블록에 배정. 같은 원인의 항목은 하나로 병합
-5. **출력** — PR 코멘트에 그대로 붙일 수 있는 마크다운으로 출력하고 종료
+5. **출력** — PR 코멘트에 그대로 붙일 수 있는 마크다운으로 출력하고 종료. PR 이면 의견 밖에 worktree 경로를 한 줄로 알림
 
 ## 가드레일
 
