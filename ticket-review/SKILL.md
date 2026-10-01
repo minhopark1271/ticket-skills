@@ -15,9 +15,13 @@ description: 다른 사람의 PR 을 (1) 기능 요구사항 위반, (2) 문법�
 
 PR 조회와 보드 동기화에 `gh` 를 쓰므로 `project.gh_account` 계정 라우팅을 거칩니다. commit·push 가 없어 `ssh_host` / `git_email` 은 무시. 빌드/테스트/린트 **명령은 프로젝트 CLAUDE.md** 의 "Common Commands" / "Testing" / "Linting" 섹션을 참조.
 
+## 리뷰 인계
+
+PR 리뷰 시작 시 [REVIEW_HANDOFF.md](REVIEW_HANDOFF.md)를 읽는다. Claude 원본과 Codex 종합의 탐색·버전 확인·저장·재인계는 이 공통 규약을 따른다. Codex 결과를 재검토하라는 요청이면 해당 final 파일과 판정 기록을 입력으로 사용한다.
+
 ## 입력
 
-1. **PR 번호 / URL**: `gh pr view {N} --json title,body,author,baseRefName,headRefName,commits,closingIssuesReferences` + `gh pr diff {N}`. 연결 Issue 의 요구사항도 읽음
+1. **PR 번호 / URL**: `gh pr view {N} --json title,body,author,baseRefName,baseRefOid,headRefName,headRefOid,commits,closingIssuesReferences` + `gh pr diff {N}`. 연결 Issue 의 요구사항도 읽음
 2. **파일 / 디렉터리**: 지정된 대상
 3. **인자 없음**: 현재 working directory 의 미커밋 변경사항 (`git status`, `git diff`, untracked) — `ticket-implement` Phase 6.5 의 경로
 4. 변경사항이 비어 있으면 사용자에게 "어디를 검토할지" 묻기
@@ -33,15 +37,15 @@ wt=../${worktree.prefix}-pr-{N}
 git fetch origin pull/{N}/head
 git worktree add --detach $wt FETCH_HEAD
 
-# 이미 있으면 (재리뷰) 갱신 — FETCH_HEAD 는 worktree 별이라 fetch 도 그 안에서 한다
-git -C $wt fetch origin pull/{N}/head
-git -C $wt checkout --detach FETCH_HEAD
+# 이미 있으면 HEAD와 git status를 확인한다. 다른 커밋이거나 변경사항이
+# 있으면 기존 worktree를 갱신하지 않고 별도 경로에 detached worktree를 만든다.
 ```
 
 - **`pr-` 접두**: Issue worktree (`${worktree.prefix}-{N}-{slug}`) 와 구분 — PR 번호와 Issue 번호는 다르다
 - **detached HEAD**: 로컬 브랜치를 만들지 않아 작성자 브랜치명과 충돌하지 않고, fork PR 도 같은 명령으로 받는다
 - **읽기는 전부 이 worktree 경로 기준**: 메인 worktree 의 파일은 PR 버전이 아니다
-- **리뷰 의견 파일**: `$wt/review-pr-{N}.md` — 다른 에이전트 인계용 임시파일. 터미널 출력과 같은 내용, 재리뷰 시 덮어씀. untracked 로 두고 커밋하지 않음
+- **검토 버전**: base/head SHA를 고정하고 fetch 결과가 목표 head인지 확인한다. diff도 고정한 SHA 기준으로 읽는다.
+- **리뷰 의견 파일**: `$wt/review-pr-{N}.md` — 공통 인계 규약의 메타데이터 주석과 터미널 출력과 같은 리뷰 본문을 저장한다. 충돌·재작성 규칙은 공통 규약을 따른다.
 - **검토 후 유지**: 재리뷰·인계에 재사용. 정리는 사용자 요청 시 `ticket-complete` Step 7 절차 (링크 제거 후 `git worktree remove`)
 
 ## 검토 축
@@ -102,7 +106,7 @@ git -C $wt checkout --detach FETCH_HEAD
 2. **보드 동기화** — Issue 번호 N 을 해석할 수 있고 (PR 이면 `closingIssuesReferences`, 아니면 worktree 디렉토리명 `${worktree.prefix}-{N}-{slug}` · 현재 브랜치) config 에 `board` 가 있으면 `Set-BoardStatus({N}, in_review)` (CONFIG.md "프로젝트 보드 Status 동기화"). N 미상 또는 보드 미설정이면 skip
 3. **3축 검토** — 파일·hunk 마다 점검해 발견 항목 수집 (위치, 문제, 근거)
 4. **분류** — 발견 항목을 블록에 배정. 같은 원인의 항목은 하나로 병합
-5. **출력** — PR 코멘트에 그대로 붙일 수 있는 마크다운으로 출력하고 종료. PR 이면 같은 내용을 리뷰 의견 파일로 저장하고, 의견 밖에 파일 경로를 한 줄로 알림
+5. **출력** — PR 코멘트에 그대로 붙일 수 있는 마크다운으로 출력하고 종료. PR 이면 공통 인계 규약에 따라 메타데이터와 같은 리뷰 본문을 파일로 저장하고, 의견 밖에 인계 한 줄을 알림
 
 ## 가드레일
 
