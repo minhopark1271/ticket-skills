@@ -9,7 +9,7 @@ Claude Code 글로벌 스킬 모음 — GitHub Issues + Wiki 기반의 티켓 �
 | `ticket-plan` | GitHub Issue 생성, worktree 자동 생성 |
 | `ticket-implement` | Issue end-to-end 구현 파이프라인 |
 | `ticket-doc` | GitHub Wiki 기술 문서 작성·관리 |
-| `ticket-review` | 코드 3축 (기능/문법/품질) 셀프 리뷰 |
+| `ticket-review` | PR 3축 (기능/문법/품질) 리뷰 의견 작성 |
 | `ticket-complete` | 커밋 → PR (Closes #N) → 머지 → worktree 정리 → Implementation Results comment |
 
 ## 프로젝트별 설정
