@@ -1,7 +1,7 @@
 # 산출물 작성 원칙
 
 `ticket-plan` · `ticket-implement` · `ticket-complete` · `ticket-doc` 가 생성하는
-산출물 (Issue body, Issue comment, PR body, Wiki 페이지) 의 공통 작성 원칙.
+산출물 (Issue body, Issue comment, PR body, `.notes/` 문서) 의 공통 작성 원칙.
 
 ## 원칙
 

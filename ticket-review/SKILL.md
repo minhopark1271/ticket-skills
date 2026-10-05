@@ -9,11 +9,11 @@ description: 다른 사람의 PR 을 (1) 기능 요구사항 위반, (2) 문법�
 
 ## Bootstrap (모든 호출 시 첫 단계)
 
-`{project_root}/.claude/ticket-skill-configs.yaml` 로드 → minimal 4 키 검증. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
+`{project_root}/.claude/ticket-skill-configs.yaml` 로드 → minimal 3 키 검증. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
 
 `${project_root}` 는 현재 worktree 가 아니라 **메인 worktree 루트**다 — 이 스킬은 `{N}-{slug}` worktree 안에서 호출되는 일이 잦은데 `.claude/` 는 대개 gitignore 라 거기에 없다.
 
-PR 조회와 보드 동기화에 `gh` 를 쓰므로 `project.gh_account` 계정 라우팅을 거칩니다. commit·push 가 없어 `ssh_host` / `git_email` 은 무시. 빌드/테스트/린트 **명령은 프로젝트 CLAUDE.md** 의 "Common Commands" / "Testing" / "Linting" 섹션을 참조.
+PR 조회와 보드 동기화에 `gh` 를 쓰므로 `project.gh_account` 계정 라우팅을 거칩니다. commit·push 가 없어 `git_email` 은 무시. 빌드/테스트/린트 **명령은 프로젝트 CLAUDE.md** 의 "Common Commands" / "Testing" / "Linting" 섹션을 참조.
 
 ## 리뷰 인계
 

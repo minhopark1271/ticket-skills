@@ -1,46 +1,44 @@
 ---
 name: ticket-doc
-description: GitHub Issue 와 연동된 기술 문서를 GitHub Wiki 페이지로 생성·관리합니다. 배경 조사, 설계 결정, 구현 분석, 실험 결과, 브레인스토밍, 상세 기술 문서를 작성할 때 사용. ticket-plan 및 ticket-implement 가 자동 호출하거나, 브레인스토밍/사후 분석을 위해 수동 호출. 프로젝트별 설정은 {project_root}/.claude/ticket-skill-configs.yaml 에서 읽습니다.
+description: GitHub Issue 와 연동된 기술 문서를 repo 루트 .notes/ 에 개인 기록으로 생성·관리합니다 (untracked, 미발행). 배경 조사, 설계 결정, 구현 분석, 실험 결과, 브레인스토밍, 상세 기술 문서를 작성할 때 사용. ticket-plan 및 ticket-implement 가 자동 호출하거나, 브레인스토밍/사후 분석을 위해 수동 호출. 프로젝트별 설정은 {project_root}/.claude/ticket-skill-configs.yaml 에서 읽습니다.
 ---
 
 # Ticket Documentation
 
-GitHub Issue 와 연동된 기술 문서를 **GitHub Wiki** 에 생성 및 관리합니다.
+GitHub Issue 와 연동된 기술 문서를 `${project_root}/.notes/` 에 **개인 기록**으로 생성 및 관리합니다. untracked 이며 발행하지 않습니다 — Issue 는 노트를 참조하지 않고 그 자체로 완결됩니다.
 
 ## Bootstrap (모든 호출 시 첫 단계)
 
-`{project_root}/.claude/ticket-skill-configs.yaml` (+ 로컬 `ticket-skill-configs.local.yaml` override, 있으면) 로드·병합 → minimal 4 키 검증 → **계정 라우팅** → `${var}` 치환. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
+`{project_root}/.claude/ticket-skill-configs.yaml` (+ 로컬 `ticket-skill-configs.local.yaml` override, 있으면) 로드·병합 → minimal 3 키 검증 → **계정 라우팅** → `${var}` 치환. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
 
-**계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 `gh` 명령 전에 `gh auth switch --user ${project.gh_account}`. `${wiki.repo_url}` 은 `git@${project.ssh_host}:${project.repo}.wiki.git` 로 유도되므로 (ssh_host 기본 `github.com`), 두 번째 계정 repo 의 wiki clone/push 가 올바른 SSH 키를 사용. 세 키 모두 없으면 단일 계정 동작.
+**계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 `gh` 명령 전에 `gh auth switch --user ${project.gh_account}`. 없으면 현재 active 계정 사용.
 
 ## 데이터 소스
 
-- **Wiki repo**: `${wiki.repo_url}` (= `git@${project.ssh_host}:${project.repo}.wiki.git`)
-- **로컬 클론 경로**: `${wiki.clone_path}` (main repo 의 sibling)
-- **Wiki 는 main repo 와 별도의 git repo** — 자체 master 브랜치, 별도 commit/push
-- **드래프트 → 발행 2단계**: 문서 작성 = 로컬 커밋(드래프트)까지만. 발행(push)은 명시적 단계 (Step 6) 에서만
-- 페이지 = 마크다운 파일 (`.md`). 파일명이 곧 페이지 슬러그.
+- **노트 디렉토리**: `${project_root}/.notes/` — 메인 worktree 루트. 어느 worktree 에서 호출해도 같은 위치
+- **untracked · 개인용**: git 에 추가하지 않고 push 도 없다. 공유가 필요하면 사용자가 Notion · Wiki 등에 직접 게시
+- **Issue 와의 관계**: Issue body · comment 는 노트를 참조하지 않는다. 노트는 Issue 를 `#{N}` 으로 가리킨다 (단방향)
+- 문서 = 마크다운 파일 (`.md`)
 
-## 지연 초기화 — Wiki 클론 (첫 호출 시)
-
-`${wiki.clone_path}` 디렉토리가 없으면 클론:
+## 지연 초기화 — 노트 디렉토리 (첫 호출 시)
 
 ```bash
-# main repo parent 디렉토리로 이동 후 clone
-git clone ${wiki.repo_url} ${wiki.clone_path}
+mkdir -p ${project_root}/.notes
+exclude="$(git -C ${project_root} rev-parse --path-format=absolute --git-common-dir)/info/exclude"
+grep -qx '.notes/' "$exclude" || echo '.notes/' >> "$exclude"
 ```
 
-이미 클론되어 있으면 스킬 호출 시 `git pull` 만 수행.
+`.git/info/exclude` 는 로컬 전용 ignore — 공유 `.gitignore` 를 건드리지 않고 `git status` 노이즈와 실수 커밋을 막는다.
 
 ## 호출 모드
 
 | 모드 | 트리거 | 설명 |
 |---|---|---|
-| **자동 (ticket-plan)** | ticket-plan 의 문서화 단계에서 자동 호출 | 계획 단계 분석이 상세할 때 Type A 페이지 생성 |
-| **자동 (ticket-implement)** | ticket-implement 의 Type B/C 에서 자동 호출 | 구현/완료 결과가 상세할 때 Type B 페이지 생성 |
-| **독립 (Standalone)** | 사용자가 직접 `/ticket-doc` 호출 | 기존 Issue 기반 브레인스토밍·추가 분석 등 Type C 페이지 생성 |
+| **자동 (ticket-plan)** | ticket-plan 의 문서화 단계에서 자동 호출 | 계획 단계 분석이 상세할 때 Type A 문서 생성 |
+| **자동 (ticket-implement)** | ticket-implement 의 Type B 에서 자동 호출 | 구현 중 분석·실험 결과가 상세할 때 Type B 문서 생성 |
+| **독립 (Standalone)** | 사용자가 직접 `/ticket-doc` 호출 | 기존 Issue 기반 브레인스토밍·추가 분석 등 Type C 문서 생성 |
 
-**자동 모드**: ticket-plan/ticket-implement 가 판단 기준에 따라 자동 호출. 별도 사용자 개입 없이 페이지가 생성되고 Issue body 또는 comment 에 wiki URL 이 추가됩니다.
+**자동 모드**: ticket-plan/ticket-implement 가 판단 기준에 따라 자동 호출. 별도 사용자 개입 없이 문서가 생성됩니다. Issue body · comment 는 수정하지 않습니다.
 
 **독립 모드**: 사용자가 직접 호출. 예시:
 - "ticket-doc 으로 #115 의 아이디어를 바탕으로 접근 관점만 바꿔서 테스트해볼거리 브레인스토밍해서 문서로 작성하자"
@@ -64,10 +62,7 @@ git clone ${wiki.repo_url} ${wiki.clone_path}
 - `58-1-market-condition-analysis.md`
 - `25-1-swing-model-architecture.md`
 
-**Wiki URL 매핑**:
-- 파일명 `115-1-websocket-flow-analysis.md`
-- → URL `${wiki.url_prefix}115-1-websocket-flow-analysis`
-- → 페이지 표시 제목: 파일의 `# ` 헤더가 표시되거나 (없으면) 파일명이 그대로 표시
+**경로**: `${project_root}/.notes/{파일명}`. 문서 제목은 파일의 `# ` 헤더.
 
 ## 사용 절차
 
@@ -76,15 +71,11 @@ git clone ${wiki.repo_url} ${wiki.clone_path}
 1. **Issue 번호 확인**:
    - **자동 모드**: 호출한 ticket-plan/ticket-implement 에서 현재 작업 중인 Issue 번호 이어받음
    - **독립 모드**: 사용자가 지정한 Issue 번호로 `gh issue view {N} --repo "${project.repo}"` 로 내용 파악
-2. **Wiki repo 동기화** (지연 클론 포함):
+2. **기존 문서 확인**: 같은 Issue 번호의 문서가 있는지 확인
    ```bash
-   cd ${wiki.clone_path} || git clone ${wiki.repo_url} ${wiki.clone_path} && cd ${wiki.clone_path}
-   git pull
+   ls ${project_root}/.notes/{N}-*.md 2>/dev/null
    ```
-3. **기존 문서 확인**: 같은 Issue 번호의 페이지가 있는지 확인
-   ```bash
-   ls ${wiki.clone_path}/{N}-*.md 2>/dev/null
-   ```
+3. **디렉토리 보장**: 없으면 위 "지연 초기화" 수행
 4. **순번 결정**: 해당 Issue 의 마지막 순번 + 1 (첫 문서면 1)
 
 ### Step 2: 문서 유형 결정
@@ -121,7 +112,7 @@ git clone ${wiki.repo_url} ${wiki.clone_path}
 **독립 모드 전용 Step**:
 1. 사용자 요청에서 **대상 Issue 번호** 와 **문서 목적** 파악
 2. `gh issue view {N} --repo "${project.repo}"` 로 현재 상태·배경·결과 컨텍스트 파악
-3. 해당 Issue 의 기존 wiki 페이지도 읽어서 중복 방지
+3. 해당 Issue 의 기존 `.notes/` 문서도 읽어서 중복 방지
 4. 필요 시 관련 코드/데이터 추가 탐색
 5. 문서 목적에 맞는 내용을 **대화형** 으로 사용자와 함께 구성
 
@@ -138,86 +129,38 @@ git clone ${wiki.repo_url} ${wiki.clone_path}
 2. **하이레벨 + 디테일 균형**: 큰 그림 설명 → 각 섹션 디테일 빠짐없이
 3. **구조화**: 표, 코드 블록, 다이어그램 적극 활용
 4. **데이터 보존**: 수치, 파라미터, 설정값 등 재현에 필요한 정보 모두 포함
-5. 파일 저장 위치: `${wiki.clone_path}/{N}-{seq}-{title-kebab}.md`
+5. 파일 저장 위치: `${project_root}/.notes/{N}-{seq}-{title-kebab}.md`
 
-### Step 4: 상호 참조 링크 (필수 — 빠짐없이 실행)
+### Step 4: 상호 참조 링크
 
-문서 생성 후 아래 3가지 방향 링크를 **모두** 확인하고 추가합니다.
+Issue → 노트 방향 링크는 **만들지 않는다** — Issue 는 노트 없이 완결되어야 하고, 노트는 untracked 라 URL 이 없다.
 
-#### 4-1. 문서 → Issue (wiki 페이지 내부)
-- 문서 본문 상단에 `> 관련 Issue: #{N}` 한 줄 — GitHub 가 자동으로 Issue 링크 렌더
-- 별도 frontmatter 불필요 (GitHub Wiki 는 frontmatter 자동 처리 X)
+#### 4-1. 문서 → Issue
+- 문서 본문 상단에 `> 관련 Issue: #{N}` 한 줄. 별도 frontmatter 불필요
 
-#### 4-2. Issue → 문서 (Issue body 또는 comment)
+#### 4-2. 문서 ↔ 문서 (양방향)
 
-**자동 (ticket-plan) 인 경우**: Issue body 의 `## Related` 섹션에 wiki URL 추가
-```bash
-gh issue edit {N} --repo "${project.repo}" --body-file /tmp/issue-updated.md
-```
-업데이트된 body 의 `## Related` 항목:
-```markdown
-- [WebSocket Flow Analysis](${wiki.url_prefix}115-1-websocket-flow-analysis) — 분석 문서
-```
-
-**자동 (ticket-implement) 또는 독립 모드인 경우**: Issue comment 로 추가
-```bash
-gh issue comment {N} --repo "${project.repo}" --body-file /tmp/doc-link.md
-```
-```markdown
-관련 문서 추가: [WebSocket Flow Analysis](${wiki.url_prefix}115-1-websocket-flow-analysis)
-```
-
-#### 4-3. 문서 ↔ 문서 (양방향)
-
-- 같은 Issue 의 기존 wiki 페이지 확인: `ls ${wiki.clone_path}/{N}-*.md`
+- 같은 Issue 의 기존 문서 확인: `ls ${project_root}/.notes/{N}-*.md`
 - 기존 문서가 있으면:
-  1. **새 문서 → 기존 문서**: 새 문서 상단에 `> 기반 문서: [[{기존 페이지 파일명}]]` (wiki 내부에서는 `[[Page-Name]]` syntax 작동)
-  2. **기존 문서 → 새 문서**: 기존 문서의 `## 후속 작업` 또는 본문 말미에 새 문서 링크 추가 (`[[새-페이지명]]`)
+  1. **새 문서 → 기존 문서**: 새 문서 상단에 `> 기반 문서: [{제목}]({기존 파일명}.md)`
+  2. **기존 문서 → 새 문서**: 기존 문서의 `## 후속 작업` 또는 본문 말미에 `[{제목}]({새 파일명}.md)` 추가
 - 다른 Issue 의 문서라도 내용상 관련이 있으면 양방향 링크 추가
 
-**Wiki 내부 링크 syntax**:
-- `[[115-1-websocket-flow-analysis]]` — 페이지 파일명 그대로
-- `[[표시 텍스트|115-1-websocket-flow-analysis]]` — 표시 텍스트 커스텀
-- 단, **Issue body/comment 에서는 `[[]]` syntax 작동 안 함** — 풀 URL 사용
+같은 디렉토리이므로 상대 링크 `[표시 텍스트](115-1-websocket-flow-analysis.md)` 를 쓴다.
 
 **체크리스트**:
-- [ ] wiki 페이지 본문 `> 관련 Issue: #{N}` 포함
-- [ ] Issue 의 `## Related` 또는 comment 에 wiki URL 추가됨
-- [ ] 같은 Issue 의 기존 wiki 페이지에 새 문서 링크 추가됨 (기존 문서 있는 경우)
-- [ ] 새 문서에 기존 wiki 페이지 링크 포함됨 (기존 문서 있는 경우)
+- [ ] 문서 본문 `> 관련 Issue: #{N}` 포함
+- [ ] 같은 Issue 의 기존 문서에 새 문서 링크 추가됨 (기존 문서 있는 경우)
+- [ ] 새 문서에 기존 문서 링크 포함됨 (기존 문서 있는 경우)
+- [ ] Issue body · comment 를 수정하지 않았음
 
-### Step 5: Wiki 로컬 commit — 드래프트 (push 안 함)
+### Step 5: 종료 — 커밋·발행 없음
 
-문서는 **로컬 `.wiki` 클론에 commit 까지만** 하고 **push 하지 않습니다** (= 드래프트). 발행(push)은 Step 6 에서 명시적으로만 일어납니다.
+이 스킬은 `git add` · commit · push 를 하지 않는다. `.notes/` 는 untracked 개인 기록이며, 공유는 사용자가 Notion · Wiki 등에 직접 게시한다.
 
-```bash
-cd ${wiki.clone_path}
-git add {N}-{seq}-{title-kebab}.md
-git commit -m "docs: #{N} - {문서 제목 요약}"   # 로컬 커밋만 — push X
-cd -
+**독립 모드 종료 보고**:
 ```
-
-**모든 모드 공통**: 이 스킬은 **절대 자동으로 push 하지 않습니다.** 자동(ticket-plan/ticket-implement)·독립 모드 모두 드래프트(로컬 커밋)에서 멈춥니다.
-
-### Step 6: 발행 — 명시적 push (드래프트 → 공개)
-
-로컬 드래프트를 GitHub Wiki 에 실제 공개하는 단계. **명시적 트리거로만** 실행합니다.
-
-| 트리거 | 발행 주체 |
-|---|---|
-| 자동 파이프라인 (ticket-plan → implement → complete) | **ticket-complete 의 "Wiki 발행" 단계**가 누적 드래프트를 일괄 push |
-| 독립 `/ticket-doc` | 사용자가 **발행을 명시적으로 요청**("발행" / "publish" / "push")할 때만 |
-
-```bash
-cd ${wiki.clone_path}
-git push        # 여기서 비로소 공개
-cd -
-```
-
-**독립 모드 종료 보고** (드래프트만 하고 멈춤 — 발행 여부는 사용자가 결정):
-```
-로컬 드래프트 저장됨: {N}-{seq}-{title-kebab}.md (아직 미발행)
-발행하려면: (cd ${wiki.clone_path} && git push)  또는 "발행" 이라고 요청하세요.
+노트 저장됨: .notes/{N}-{seq}-{title-kebab}.md
 ```
 
 ## 템플릿
@@ -352,7 +295,7 @@ def core_op(x: T, *, opt: U = DEFAULT, retries: int = 3) -> R:
 # {문서 제목}
 
 > 관련 Issue: #{N}
-> 기반 문서: [[{기존 wiki 페이지 파일명}]] (있는 경우)
+> 기반 문서: [{제목}]({기존 문서 파일명}.md) (있는 경우)
 
 ## 배경 및 동기
 
@@ -403,9 +346,8 @@ def core_op(x: T, *, opt: U = DEFAULT, retries: int = 3) -> R:
 ### 문서 품질 체크리스트
 
 - [ ] 본문 `> 관련 Issue: #{N}` 한 줄 포함
-- [ ] Issue 의 Related (body 또는 comment) 에 이 wiki URL 추가됨
-- [ ] 같은 Issue 의 기존 wiki 페이지에 이 문서 링크 추가됨 (해당 시)
-- [ ] 이 문서에 기존 관련 wiki 페이지 링크 포함 (해당 시)
+- [ ] 같은 Issue 의 기존 문서에 이 문서 링크 추가됨 (해당 시)
+- [ ] 이 문서에 기존 관련 문서 링크 포함 (해당 시)
 - [ ] 개요에서 문서 목적이 명확한가
 - [ ] 핵심 수치/파라미터가 모두 기록되었는가
 - [ ] 표와 코드 블록으로 가독성 확보
@@ -423,7 +365,7 @@ def core_op(x: T, *, opt: U = DEFAULT, retries: int = 3) -> R:
 
 ### GFM 렌더링 주의 — 물결표(`~`) 취소선 오작동
 
-GitHub(Issue body·comment·Wiki)는 GFM 이라 물결 하나짜리 `~텍스트~` 도 취소선으로 렌더합니다. 근사값(`~15종`)·범위(`1~2`·`25~30`) 표기로 물결을 쓰면, 한 문단·표 셀에 물결이 2개 이상 나올 때 그 사이가 통째로 취소선 처리됩니다.
+GitHub(Issue body·comment)는 GFM 이라 물결 하나짜리 `~텍스트~` 도 취소선으로 렌더합니다. 근사값(`~15종`)·범위(`1~2`·`25~30`) 표기로 물결을 쓰면, 한 문단·표 셀에 물결이 2개 이상 나올 때 그 사이가 통째로 취소선 처리됩니다.
 
 - **해결**: 리터럴 물결은 `\~` 로 이스케이프 (`\~15종`, `1\~2`). GitHub·Obsidian 양쪽에서 `~` 로 정상 렌더됩니다.
 - **예외**: 코드블록(펜스/인라인) 안의 물결은 이스케이프 금지 — 백슬래시가 그대로 노출됩니다. 펜스 밖의 물결만 치환하세요.
@@ -433,20 +375,20 @@ GitHub(Issue body·comment·Wiki)는 GFM 이라 물결 하나짜리 `~텍스트~
 
 | 위치 | 대상 | 문법 |
 |---|---|---|
-| Wiki 페이지 → Issue | Issue #N | `#{N}` (자동 링크) |
-| Wiki 페이지 → Wiki 페이지 | 다른 페이지 | `[[Page-Filename]]` 또는 `[[표시 텍스트\|Page-Filename]]` |
-| Wiki 페이지 → 코드 파일 | 백틱 경로 | `` `src/foo.py` `` 또는 GitHub blob URL |
-| Issue body/comment → Wiki | wiki 페이지 | 풀 URL `[제목](${wiki.url_prefix}{Page-Filename})` |
+| 노트 → Issue | Issue #N | `#{N}` |
+| 노트 → 노트 | 다른 노트 | 상대 링크 `[표시 텍스트](Page-Filename.md)` |
+| 노트 → 코드 파일 | 백틱 경로 | `` `src/foo.py` `` 또는 GitHub blob URL |
+| Issue body/comment → 노트 | — | **없음** — Issue 는 노트를 참조하지 않는다 |
 | Issue body/comment → Issue | 다른 Issue | `#{N}` |
 
 ## 권장 사항
 
-- 문서 하나의 주제는 하나로 집중 (여러 주제면 여러 페이지로 분리)
-- Issue 완료 후에도 wiki 페이지는 유지 (지식 자산)
-- 기존 wiki 페이지와 중복 방지 (Step 1 의 기존 문서 확인 필수)
-- 문서 내용이 짧으면 (1페이지 이하) Issue body/comment 에 직접 기록하는 것이 나음 → 별도 wiki 페이지 불필요
+- 문서 하나의 주제는 하나로 집중 (여러 주제면 여러 문서로 분리)
+- Issue 완료 후에도 노트는 유지 (개인 지식 기록)
+- 기존 노트와 중복 방지 (Step 1 의 기존 문서 확인 필수)
+- Issue 에 들어가야 할 결정·계약은 Issue body/comment 에 직접 적는다. 노트는 도출 과정 · 분석 · 실험 기록 — Issue 를 대신하지 않는다
 - **자동 모드**: 판단 기준에 해당하지 않으면 무조건 스킵 (과도한 문서 생성 방지)
 - **독립 모드**: 반드시 기존 Issue 와 연동 (Issue 없는 독립 문서는 대상 X)
 - 독립 모드로 브레인스토밍 문서 작성 후, 실행할 아이디어가 나오면 `ticket-plan` 으로 새 Issue 생성 권유
 - **Type B 의 후속 작업**: 단순 리스트로만 — 다른 Issue 를 자동 수정하거나 라벨/comment 를 추가하지 않습니다 (정보량 폭증 방지)
-- Wiki repo 는 main repo 와 별도 — **자동 push 안 함**. 발행은 명시적 단계(Step 6)에서만 (드래프트 → 발행 분리)
+- `.notes/` 는 untracked 개인 기록 — commit · push · Issue 참조 모두 하지 않는다. 공유는 사용자가 직접

@@ -5,25 +5,22 @@ description: GitHub Issues 로 Claude Code 가 실행할 개발 티켓을 작성
 
 # Ticket Plan
 
-GitHub Issue 로 Claude Code 가 실행할 개발 티켓을 구조적으로 작성합니다. 프로젝트별 설정 (`repo`, `default_branch`, `worktree.prefix`, `wiki.clone_path`) 은 `{project_root}/.claude/ticket-skill-configs.yaml` 에서 읽습니다.
+GitHub Issue 로 Claude Code 가 실행할 개발 티켓을 구조적으로 작성합니다. 프로젝트별 설정 (`repo`, `default_branch`, `worktree.prefix`) 은 `{project_root}/.claude/ticket-skill-configs.yaml` 에서 읽습니다.
 
 ## Bootstrap (모든 호출 시 첫 단계)
 
 이 스킬은 `{project_root}/.claude/ticket-skill-configs.yaml` 의 설정을 읽어 동작합니다. 첫 호출 시 다음 절차를 수행:
 
 1. **프로젝트 루트 감지**: `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"` (실패 시 cwd) — **메인 worktree 루트**. `--show-toplevel` 은 링크 worktree 안에서 config 를 못 찾는다(CONFIG.md "Bootstrap 절차" 1번)
-2. **Config 로드 + 로컬 override 병합**: 공유 `${project_root}/.claude/ticket-skill-configs.yaml` (없으면 minimal 4 키 (`project.repo`, `project.default_branch`, `worktree.prefix`, `wiki.clone_path`) 작성 안내 후 중단) → 로컬 `ticket-skill-configs.local.yaml` 있으면 deep merge (로컬 우선; 개인 gh 계정·SSH·이메일 키). 없으면 skip
+2. **Config 로드 + 로컬 override 병합**: 공유 `${project_root}/.claude/ticket-skill-configs.yaml` (없으면 minimal 3 키 (`project.repo`, `project.default_branch`, `worktree.prefix`) 작성 안내 후 중단) → 로컬 `ticket-skill-configs.local.yaml` 있으면 deep merge (로컬 우선; 개인 gh 계정·이메일 키). 없으면 skip
 3. **브랜치 override merge** (옵셔널): `git branch --show-current` 결과가 `branches.{name}` 에 있으면 해당 키만 덮어쓰기
-4. **필수 키 검증**: 4 키 모두 존재 확인. 누락 시 보고 후 중단
+4. **필수 키 검증**: 3 키 모두 존재 확인. 누락 시 보고 후 중단
 5. **계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 `gh` 명령 전에 `gh auth switch --user ${project.gh_account}` 실행 (실패 시 `gh auth login` 안내 후 중단). 없으면 현재 active 계정 사용
 6. **치환 매핑 준비** — 본문의 `${var}` 는 다음으로 치환:
+   - `${project_root}` ← 1번 결과 (메타 변수)
    - `${project.repo}` ← config
    - `${project.default_branch}` ← config
    - `${worktree.prefix}` ← config
-   - `${wiki.clone_path}` ← config
-   - `${project.ssh_host}` ← config (없으면 `github.com`)
-   - `${wiki.repo_url}` ← `git@${project.ssh_host}:${project.repo}.wiki.git` (universal default)
-   - `${wiki.url_prefix}` ← `https://github.com/${project.repo}/wiki/` (universal default)
    - `${branch}` · `${base}` ← Issue body 의 브랜치 줄 (worktree 생성 시점에 해석. CONFIG.md "브랜치 해석")
 7. **자가 검증**: 본문에 매핑 불가 `${...}` 가 있으면 보고 후 중단
 
@@ -33,7 +30,7 @@ GitHub Issue 로 Claude Code 가 실행할 개발 티켓을 구조적으로 작�
 
 - **티켓**: GitHub Issues (`gh issue ...`). 티켓 번호 = Issue 번호
 - **레포**: `${project.repo}`, 기본 브랜치 `${project.default_branch}`
-- **Wiki (분석 문서)**: `ticket-doc` 스킬이 GitHub Wiki 에서 관리. 본 스킬은 Issue body 에서 wiki 페이지 URL 로만 참조
+- **설계 노트**: `ticket-doc` 이 `${project_root}/.notes/` 에 untracked 개인 기록으로 관리. Issue body 는 노트를 참조하지 않는다 — Issue 는 그 자체로 완결
 
 ## 지연 초기화 — Universal 라벨 (첫 호출 시)
 
@@ -91,7 +88,7 @@ gh label create "infra" --color "BFD4F2" --description "인프라 / DevOps" --fo
 
 #### Step 2.5: 설계 평가 (조건부 필수)
 
-Step 2 의 분석 결과, 아래 트리거 중 **하나 이상 해당**하면 설계를 도출한 뒤 **wiki 페이지로 작성**하고, Issue 의 `## 변경` 에는 **채택안 1줄 + 기각 1줄 + wiki 링크** 만 남깁니다.
+Step 2 의 분석 결과, 아래 트리거 중 **하나 이상 해당**하면 설계를 도출합니다. 도출 과정은 `.notes/` 에 기록하고, Issue 의 `## 변경` 에는 **채택안 1줄 + 기각 1줄 + 바꾸는 계약** 을 남깁니다.
 
 | 트리거 | 예 |
 |---|---|
@@ -109,10 +106,10 @@ Step 2 의 분석 결과, 아래 트리거 중 **하나 이상 해당**하면 �
 3. **대안 비교** — 각 후보의 장점·단점·복잡도·확장성·기존 코드와의 정합성을 표로 평가.
 4. **최적 선택** — 어떤 후보를 채택할지 + **선택 근거** 명시. 후순위 대안은 기각 사유 1줄.
 5. **산출물 배치**:
-   - **wiki** (문서화 단계에서 ticket-doc Type A) — 대안 비교 표 · 자료 구조 · 클래스 hierarchy · 핵심 시그니처 · 상세 로직
-   - **Issue `## 변경`** — `**방안 X 채택** — {근거 1줄}` + `({기각안}: {기각 사유})` + wiki 링크
+   - **`.notes/`** (문서화 단계에서 ticket-doc Type A, 개인 기록) — 대안 비교 표 · 자료 구조 · 클래스 hierarchy · 핵심 시그니처 · 상세 로직
+   - **Issue `## 변경`** — `**방안 X 채택** — {근거 1줄}` + `({기각안}: {기각 사유})` + 바꾸는 계약 · 규칙 bullet. 노트 링크 없음
 
-자료 구조 · hierarchy · 시그니처 코드 블록을 Issue body 에 붙여넣지 않습니다. 이 셋은 wiki 소유입니다.
+자료 구조 · hierarchy · 시그니처 코드 블록을 Issue body 에 붙여넣지 않습니다. 이 셋은 `.notes/` 소유이며, Issue 는 계약을 문장으로 적어 링크 없이 완결되게 합니다.
 
 #### Step 3: 티켓 분할 평가
 
@@ -122,7 +119,7 @@ Step 2 의 분석 결과, 아래 트리거 중 **하나 이상 해당**하면 �
 
 | 기준 | 예시 |
 |------|------|
-| **덩어리가 큰 경우** | Phase 4개 이상이거나, 예상 변경 파일 10개 이상 |
+| **덩어리가 큰 경우** | Phase 4개 이상이거나, 예상 변경 파일 10개 이상, 또는 body 100줄 초과 (Template 의 기준 분량) |
 | **복잡도가 섞인 경우** | 간단한 config 변경 + 복잡한 알고리즘 구현이 하나에 섞임 |
 | **종류가 명확히 나뉘는 경우** | DB 스키마 / API 엔드포인트 / 대시보드 UI 등 별도 레이어 |
 | **독립 배포 가능** | 일부만 먼저 머지해도 시스템이 정상 동작 |
@@ -236,18 +233,17 @@ gh issue list --repo "${project.repo}" --search "{키워드 in:title,body}" --st
 Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 
 **자동 호출 판단 기준** — 아래 중 하나 이상 해당 시 `ticket-doc` 호출:
-- **Step 2.5 트리거 해당** — 설계 상세 (대안 표 · 자료 구조 · hierarchy · 시그니처) 는 항상 wiki 소유
-- Issue body 가 50줄 상한을 넘는 경우 — 초과분을 wiki 로 이관
+- **Step 2.5 트리거 해당** — 설계 상세 (대안 표 · 자료 구조 · hierarchy · 시그니처) 는 항상 노트 소유
+- Issue body 가 50줄 기준을 넘는 경우 — 완결에 불필요한 서술 · 도출 과정을 노트로 덜어냄
 - 배경 조사/코드 분석이 Issue body 에 다 담기엔 상세한 경우
 - 알고리즘 수식이나 상세 플로우 설명 필요
 - 데이터 흐름 / 아키텍처 다이어그램 수준 포함
 
 **실행 순서**:
-1. `ticket-doc` Type A 호출 → GitHub Wiki 페이지 **드래프트** 생성 (로컬 커밋만; **push 안 함**)
-2. 페이지명: `{issue-number}-{seq}-{analysis-title}` (예: `115-1-websocket-flow-analysis`)
-3. 생성된 wiki 페이지 URL 을 Issue body 의 `## Related` 섹션에 추가 (URL 은 파일명 기반이라 발행 전에도 확정 — 실제 발행은 `ticket-complete` 에서)
+1. `ticket-doc` Type A 호출 → `${project_root}/.notes/{issue-number}-{seq}-{analysis-title}.md` 작성 (예: `115-1-websocket-flow-analysis.md`)
+2. Issue body 는 수정하지 않는다 — 노트는 untracked 개인 기록이라 URL 이 없고, Issue 는 노트 없이 완결되어야 한다
 
-**해당 없으면** 스킵. 6 섹션 상한 안에 담긴 경우 별도 wiki 페이지 불필요.
+**해당 없으면** 스킵.
 
 ---
 
@@ -267,7 +263,7 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 
 #### Step R3: Issue 전문 브리핑
 
-`gh issue view {N} --repo "${project.repo}" --json title,body,labels,url` 로 가져온 후, `##` 헤더 기준 섹션별 전문 표시 — body 50줄 상한이므로 요약하지 않습니다. Implementation Plan 은 Phase 단위 유지. 옵셔널 섹션 없으면 생략.
+`gh issue view {N} --repo "${project.repo}" --json title,body,labels,url` 로 가져온 후, `##` 헤더 기준 섹션별 전문 표시 — 요약하지 않습니다. Implementation Plan 은 Phase 단위 유지. 옵셔널 섹션 없으면 생략.
 
 브리핑 후 바로 Step R4 로 진행.
 
@@ -280,7 +276,7 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 2. 범위
 3. 현재 구조
 4. 문제
-5. 변경 — Step 2.5 트리거 시 채택 근거 · 기각 사유 · wiki 링크가 있는지 함께 확인
+5. 변경 — Step 2.5 트리거 시 채택 근거 · 기각 사유가 있는지 함께 확인
 6. 기대
 7. Implementation Plan — 있는 경우만 (Phase 별)
 8. Related — 있는 경우만
@@ -323,8 +319,8 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 |---|---|
 | **현상** / **문제** 변경 | → 변경 · 기대 정합성 확인 |
 | **범위** 변경 | → 현재 구조 · 변경 · Implementation Plan Files 동기화 |
-| **현재 구조** 변경 | → 문제의 인과와 변경의 전제 재확인. wiki 설계 문서의 현황 분석 반영 |
-| **변경** 의 채택안 교체 | → wiki 의 대안 비교 · 자료 구조 · 시그니처 갱신 + 기각 사유 보정 + Implementation Plan 재구성 |
+| **현재 구조** 변경 | → 문제의 인과와 변경의 전제 재확인. `.notes/` 설계 노트의 현황 분석 반영 |
+| **변경** 의 채택안 교체 | → `.notes/` 노트의 대안 비교 · 자료 구조 · 시그니처 갱신 + 기각 사유 보정 + Implementation Plan 재구성 |
 | **변경** 항목 추가/삭제 | → 기대 · Implementation Plan Phase 동기화 |
 | **기대** 추가/수정 | → 변경 에 대응 항목이 있는지 확인 |
 | **Implementation Plan** Phase 추가/삭제/수정 | → 기대의 검증 대상 · Related 파일 동기화 |
@@ -381,9 +377,9 @@ worktree 생성을 원하지 않으면 스킵.
 
 ## Template (Issue body)
 
-Issue body 는 **필수 6 섹션 + 옵셔널 2 섹션**. 각 섹션은 한 가지 질문에만 답하고, 상한을 넘기면 줄이거나 wiki 로 이관합니다 (늘려 쓰지 않음).
+Issue body 는 **필수 6 섹션 + 옵셔널 2 섹션**. 각 섹션은 한 가지 질문에만 답합니다. 아래 분량은 기준이지 상한이 아닙니다 — 완결에 필요한 내용은 남기고, 중복 · 서술 · 도출 과정을 줄입니다.
 
-| 섹션 | 답하는 질문 | 상한 |
+| 섹션 | 답하는 질문 | 기준 분량 |
 |---|---|---|
 | `## 현상` | 지금 무슨 일이 일어나고 있나 | 원문 인용 + 3줄 |
 | `## 범위` | 무엇을 건드리고 무엇을 안 건드리나 | 각 2-4 bullet |
@@ -394,7 +390,7 @@ Issue body 는 **필수 6 섹션 + 옵셔널 2 섹션**. 각 섹션은 한 가�
 | `## Implementation Plan` (옵셔널) | 어떤 순서로 바꾸나 | Phase 당 Files · Changes 2줄 (Notes 는 엣지 케이스 있을 때만) |
 | `## Related` (옵셔널) | 무엇과 엮여 있나 | 제한 없음 |
 
-**body 전체 50줄 상한**. 초과하면 `ticket-doc` Type A 로 wiki 페이지를 만들고 Issue 엔 결론 + 링크만 남깁니다.
+**body 전체 50줄 기준**. Issue 는 링크 없이 완결되어야 하므로 결정 · 계약 · 완료 기준은 분량 때문에 빼지 않습니다. 줄이는 대상은 중복 · 서술 · 도출 과정이고, 덜어낸 분석은 `ticket-doc` Type A 로 `.notes/` 에 남깁니다. 100줄을 넘기면 Step 3 의 분할을 검토합니다.
 
 **시점 분리가 핵심** — `현재 구조` 는 사실, `변경` 은 결정. 한 목록에 섞이면 불릿마다 시점이 바뀌어 무엇이 사실이고 무엇이 결정인지 구분되지 않습니다. `범위` 의 "안 건드림" 이 범위 경계 (타 Issue 소유 · 의도적 미수정 · 후속 후보) 를 담습니다.
 
@@ -418,7 +414,7 @@ Issue body 는 **필수 6 섹션 + 옵셔널 2 섹션**. 각 섹션은 한 가�
 
 ## 변경
 **방안 {X} 채택** — {근거 1줄}                              <!-- Step 2.5 트리거 시만. 아니면 이 두 줄 생략 -->
-({기각안}: {기각 사유 1줄}) → [설계 상세](${wiki.url_prefix}{Page-Name})
+({기각안}: {기각 사유 1줄})
 
 - {바꾸는 계약 · 규칙}
 
@@ -437,14 +433,12 @@ Issue body 는 **필수 6 섹션 + 옵셔널 2 섹션**. 각 섹션은 한 가�
 
 ## Related
 - #123 — 의존 / 관련 Issue
-- [WebSocket Flow Analysis](${wiki.url_prefix}115-1-websocket-flow-analysis) — 분석 문서 (wiki URL 사용; Issue body 에서는 `[[]]` 미동작)
 - `path/to/relevant/file.py`
 - 브랜치 `feat/foo` (base `feat/bar`)   <!-- 계획이 브랜치명을 확정한 경우만. 형식 고정 — CONFIG.md "브랜치 해석" -->
 ```
 
 **상호 링크 규칙**:
 - Issue → Issue: `#123` (자동 링크)
-- Issue → Wiki: 전체 URL (`[표시 텍스트](${wiki.url_prefix}{Page-Name})`)
 - Issue → 파일: 백틱 경로 (`src/foo.py`) 또는 GitHub blob URL
 
 ## 라벨
@@ -483,7 +477,7 @@ Issue body 는 **필수 6 섹션 + 옵셔널 2 섹션**. 각 섹션은 한 가�
 
 ## 변경
 **방안 B 채택** — 기존 `Fetcher` 인터페이스를 그대로 구현해 호출부 무변경.
-(A. 별도 수집 프로세스: 배포·모니터링 대상 증가로 기각) → [설계 상세](${wiki.url_prefix}115-1-websocket-design)
+(A. 별도 수집 프로세스: 배포·모니터링 대상 증가로 기각)
 
 - `websockets` 로 Binance 가격 스트림 구독
 - 끊김 시 exponential backoff 재연결
@@ -532,10 +526,10 @@ PR 생성 형식은 `ticket-complete` Step 4 참조. 핵심:
 
 - 현상 은 관측된 사실, 기대 는 결과 (outcome). 활동 (activity) 을 적지 않습니다
 - 현재 구조 는 사실, 변경 은 결정. 한쪽에 다른 쪽을 섞지 않습니다
-- 자료 구조 · hierarchy · 시그니처 코드 블록은 wiki 소유. Issue 엔 채택 근거 + 링크
-- 섹션 상한 초과 시 줄이거나 wiki 로 이관. 상한을 늘려 쓰지 않습니다
+- 자료 구조 · hierarchy · 시그니처 코드 블록은 `.notes/` 소유. Issue 엔 채택 근거 + 계약 문장
+- 섹션 분량은 기준. 완결에 필요하면 넘길 수 있고, 줄이는 대상은 중복 · 서술 · 도출 과정
 - Implementation Plan Phase 는 작고 체크 가능한 단위
-- Related 에 코드 파일 경로 + Issue/Wiki 링크 혼재 허용
+- Related 에 코드 파일 경로 + Issue 링크 혼재 허용
 - 옵셔널 섹션은 필요할 때만, 빈 섹션 금지
 - 우선순위 medium 은 라벨 없이 default
 - 작성 후 한 번 더 사용자 확인 → 그 다음 worktree 생성

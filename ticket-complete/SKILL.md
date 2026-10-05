@@ -6,21 +6,20 @@ description: GitHub Issue 를 end-to-end 로 마무리합니다. 커밋, 푸시,
 # Ticket Complete
 
 GitHub Issue 구현 완료 후 전체 마무리 프로세스를 한 번에 실행합니다.
-커밋 → PR 생성 (Closes #N) → PR 머지 → worktree/브랜치 정리 → 구현 결과 comment → Issue 라벨 정리·close → wiki 발행(push).
+커밋 → PR 생성 (Closes #N) → PR 머지 → worktree/브랜치 정리 → 구현 결과 comment → Issue 라벨 정리·close.
 
 ## Bootstrap (모든 호출 시 첫 단계)
 
-`{project_root}/.claude/ticket-skill-configs.yaml` (+ 로컬 `ticket-skill-configs.local.yaml` override, 있으면) 로드·병합 → minimal 4 키 검증 → **계정 라우팅** → `${var}` 치환. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
+`{project_root}/.claude/ticket-skill-configs.yaml` (+ 로컬 `ticket-skill-configs.local.yaml` override, 있으면) 로드·병합 → minimal 3 키 검증 → **계정 라우팅** → `${var}` 치환. 상세: `~/.claude/skills/ticket-plan/CONFIG.md`.
 
 `${branch}`·`${base}` 는 config 가 아니라 Issue body 에서 나온다 — Step 1 에서 확정한다.
 
-**계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 PR/커밋/push 전에 `gh auth switch --user ${project.gh_account}` 실행. `project.git_email` 이 있으면 커밋 전 `git config user.email ${project.git_email}` (로컬). `${wiki.repo_url}` 은 `git@${project.ssh_host}:...` 로 유도 (ssh_host 기본 `github.com`) — wiki push 가 올바른 SSH 키 사용. main repo push 는 `origin` remote URL 을 따름. 세 키 모두 없으면 단일 계정 동작.
+**계정 라우팅** (멀티 계정 — 옵셔널): `project.gh_account` 가 있으면 PR/커밋/push 전에 `gh auth switch --user ${project.gh_account}` 실행. `project.git_email` 이 있으면 커밋 전 `git config user.email ${project.git_email}` (로컬). push 는 `origin` remote URL 을 따름. 두 키 모두 없으면 단일 계정 동작.
 
 ## 데이터 소스
 
 - **티켓**: GitHub Issues (`${project.repo}`)
 - **PR ↔ Issue 연동**: PR body 의 `Closes #{N}` 으로 머지 시 Issue 자동 close. **base 가 repo 기본 브랜치일 때만 동작** — 아니면 Step 9-6 이 명시 close (CONFIG.md "브랜치 해석")
-- **Wiki**: ticket-doc 가 드래프트(로컬 커밋)로 남긴 wiki 페이지를 이 스킬이 **발행(push)** — 자동 파이프라인의 유일한 발행 지점
 
 ## 사용 시점
 - Issue 구현이 끝나고 모든 acceptance criteria 가 통과된 후
@@ -33,9 +32,9 @@ GitHub Issue 구현 완료 후 전체 마무리 프로세스를 한 번에 실�
 
 ## 변경 유형
 
-- **코드 변경 + 머지 흐름 (기본)**: Step 1~11 전체 수행
-- **draft PR 흐름** (`pr.draft: true`): Step 1~4 로 draft PR 을 열고 **Step 5 에서 중단**. Step 6~8(머지·pull·정리) 스킵, Step 9~11 은 수행하되 Issue 는 열어 둔다. 사람이 draft 해제·CI 확인 후 재호출하면 Step 5 부터 이어간다
-- **Docs-only 변경** (글로벌 스킬, 외부 문서 등 worktree·PR 불필요): Step 1 의 Issue 확인 후 **Step 2~8 스킵**. Step 9 (라벨 정리 / 체크리스트 / 구현 결과 comment / close), Step 10 (wiki 발행) 만 수행. PR/머지가 없으므로 Issue 자동 close 도 발생하지 않음 → Step 9-6 의 명시 close 수행
+- **코드 변경 + 머지 흐름 (기본)**: Step 1~10 전체 수행
+- **draft PR 흐름** (`pr.draft: true`): Step 1~4 로 draft PR 을 열고 **Step 5 에서 중단**. Step 6~8(머지·pull·정리) 스킵, Step 9~10 은 수행하되 Issue 는 열어 둔다. 사람이 draft 해제·CI 확인 후 재호출하면 Step 5 부터 이어간다
+- **Docs-only 변경** (글로벌 스킬, 외부 문서 등 worktree·PR 불필요): Step 1 의 Issue 확인 후 **Step 2~8 스킵**. Step 9 (라벨 정리 / 체크리스트 / 구현 결과 comment / close) 만 수행. PR/머지가 없으므로 Issue 자동 close 도 발생하지 않음 → Step 9-6 의 명시 close 수행
 
 ## 사용 절차
 
@@ -109,7 +108,7 @@ EOF
 
 ### Step 5: PR 머지
 
-**`pr.draft: true` 면 여기서 중단한다.** draft PR 은 CI 가 안 돌아 머지 판단 근거가 없다. `gh pr ready` 를 **호출하지 말고** PR URL 과 "draft 해제 → CI 통과 확인 후 재호출" 을 보고한 뒤 Step 6~8(머지 의존 단계)을 건너뛴다. Step 9~11(Issue comment·라벨·wiki 발행)은 그대로 수행하되 Issue 는 열어 둔다 (9-6 도 건너뛴다) — 나중에 머지될 때 닫힌다.
+**`pr.draft: true` 면 여기서 중단한다.** draft PR 은 CI 가 안 돌아 머지 판단 근거가 없다. `gh pr ready` 를 **호출하지 말고** PR URL 과 "draft 해제 → CI 통과 확인 후 재호출" 을 보고한 뒤 Step 6~8(머지 의존 단계)을 건너뛴다. Step 9~10(Issue comment·라벨·최종 확인)은 그대로 수행하되 Issue 는 열어 둔다 (9-6 도 건너뛴다) — 나중에 머지될 때 닫힌다.
 
 **중요: 사용자 확인 필수**
 PR 머지 전 사용자에게 빌드/테스트 결과 확인 여부를 묻습니다. "머지해", "테스트 완료", "확인 완료" 등 명시 승인 없으면 머지 금지.
@@ -227,23 +226,7 @@ gh issue close {N} --repo "${project.repo}" --reason completed
 
 머지가 끝난 경우에만 호출한다 — draft 흐름은 Issue 를 열어 둔다 (Step 5).
 
-### Step 10: Wiki 발행 (해당 시)
-
-구현/계획 중 `ticket-doc` 이 남긴 wiki **드래프트**(로컬 커밋)를 여기서 **발행(push)** 합니다 — 자동 파이프라인의 유일한 발행 지점:
-
-```bash
-cd ${wiki.clone_path}
-git status
-# 드래프트가 로컬 커밋으로 쌓여 있음 → push 로 발행
-# (혹시 미커밋 변경이 남아 있으면 함께 커밋)
-git add . && git diff --cached --quiet || git commit -m "docs: #{N} - {요약}"
-git push
-cd -
-```
-
-발행할 드래프트(로컬 미push 커밋)도, 미커밋 변경도 없으면 스킵.
-
-### Step 11: 최종 확인
+### Step 10: 최종 확인
 
 ```bash
 git worktree list    # worktree 정리 확인
@@ -261,7 +244,6 @@ Issue #{N} 완료:
 - 브랜치 정리 완료 (local + remote)
 - 구현 결과 comment 추가 완료
 - Follow-up: {새 Issue N건 생성: #X, #Y / 기록만 / 없음}
-- Wiki: {N개 드래프트 발행(push) 완료 / 발행할 드래프트 없음}
 ```
 
 ## 오류 처리
@@ -271,7 +253,6 @@ Issue #{N} 완료:
 - **worktree 제거 실패**: 미커밋 변경 → 사용자 확인 후 `--force`
 - **브랜치 삭제 실패**: 이미 삭제됨 → 스킵
 - **Issue 자동 close 실패**: `${base}` 가 repo 기본 브랜치가 아니거나 PR body 의 `Closes #{N}` 누락 → Step 9-6 의 명시 close
-- **Wiki push 실패**: 충돌 시 `git pull --rebase` 후 재시도
 
 ## 주요 참고 사항
 
@@ -282,4 +263,3 @@ Issue #{N} 완료:
 - **PR body 의 `Closes #{N}` 필수**: 누락 시 Issue 가 자동으로 close 되지 않음 (base 가 기본 브랜치일 때). 그 외 경우는 Step 9-6 이 닫는다
 - **커밋 분할**: `pr.merge_method: merge` 면 커밋은 ticket-implement Phase 6.7 소관. Step 2 는 확인만 한다
 - **후속 작업 처리**: 사용자가 `new` 로 명시한 항목만 새 Issue. 다른 Issue 자동 수정·전파 금지
-- **Wiki 와 main repo 는 별도 git repo**: wiki 변경은 `${wiki.clone_path}` 에서 별도로 commit/push

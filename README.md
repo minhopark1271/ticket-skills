@@ -1,6 +1,6 @@
 # claude-ticket-skills
 
-Claude Code 글로벌 스킬 모음 — GitHub Issues + Wiki 기반의 티켓 워크플로우.
+Claude Code 글로벌 스킬 모음 — GitHub Issues 기반의 티켓 워크플로우. 분석 문서는 repo 루트 `.notes/` 에 untracked 개인 기록.
 
 ## 구성 스킬
 
@@ -8,13 +8,13 @@ Claude Code 글로벌 스킬 모음 — GitHub Issues + Wiki 기반의 티켓 �
 |---|---|
 | `ticket-plan` | GitHub Issue 생성, worktree 자동 생성 |
 | `ticket-implement` | Issue end-to-end 구현 파이프라인 |
-| `ticket-doc` | GitHub Wiki 기술 문서 작성·관리 |
+| `ticket-doc` | `.notes/` 기술 문서 작성·관리 (untracked 개인 기록, 미발행) |
 | `ticket-review` | PR 3축 (기능/문법/품질) 리뷰 의견 작성 |
 | `ticket-complete` | 커밋 → PR (Closes #N) → 머지 → worktree 정리 → Implementation Results comment |
 
 ## 프로젝트별 설정
 
-각 프로젝트 루트의 `.claude/ticket-skill-configs.yaml` 에서 minimal 4 키 정의:
+각 프로젝트 루트의 `.claude/ticket-skill-configs.yaml` 에서 minimal 3 키 정의:
 
 ```yaml
 project:
@@ -22,8 +22,6 @@ project:
   default_branch: master
 worktree:
   prefix: ../{repo-name}-   # worktree 디렉토리 prefix
-wiki:
-  clone_path: ../{repo}.wiki/
 ```
 
 상세: `ticket-plan/CONFIG.md`
