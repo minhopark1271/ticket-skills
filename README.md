@@ -33,10 +33,8 @@ worktree:
 ### macOS / Linux (symlink)
 
 ```bash
-# 1. Clone — 두 org 에 동일 미러가 있다. 둘 중 하나 선택:
+# 1. Clone
 git clone git@github-numereal:NumeRealWorks/claude-ticket-skills.git ~/Projects/claude-ticket-skills
-# 또는 NohLabWorks (기본 github.com 키 사용):
-# git clone git@github.com:NohLabWorks/claude-ticket-skills.git ~/Projects/claude-ticket-skills
 
 # 2. ~/.claude/skills/ 에 심볼릭 링크 생성
 mkdir -p ~/.claude/skills
@@ -53,10 +51,8 @@ ls -la ~/.claude/skills/ | grep ticket
 Windows 의 심볼릭 링크 생성은 관리자 권한 또는 개발자 모드가 필요하다. 권한 없이 동일하게 동작하는 **디렉토리 junction** 을 사용한다 (읽기·쓰기 모두 원본에 그대로 적용됨).
 
 ```powershell
-# 1. Clone — 두 org 에 동일 미러가 있다. 둘 중 하나 선택:
+# 1. Clone
 git clone git@github-numereal:NumeRealWorks/claude-ticket-skills.git "$HOME\Projects\claude-ticket-skills"
-# 또는 NohLabWorks (기본 github.com 키 사용):
-# git clone git@github.com:NohLabWorks/claude-ticket-skills.git "$HOME\Projects\claude-ticket-skills"
 
 # 2. ~/.claude/skills/ 에 junction 생성
 $src = "$HOME\Projects\claude-ticket-skills"
@@ -79,25 +75,19 @@ Get-ChildItem $dst | Select-Object Name, LinkType, Target | Format-Table -AutoSi
 
 ## 동기화
 
-이 repo 는 **두 org 에 동일 미러**로 관리된다 (`NumeRealWorks`, `NohLabWorks`).
-`origin` 의 push URL 이 양쪽 모두로 설정돼 있어 `git push` 한 번이면 두 곳이 동기화된다.
+remote 는 `origin` (NumeRealWorks) 하나다.
 
 ```bash
 cd ~/Projects/claude-ticket-skills
 git add . && git commit -m "update: ..."
-git push            # origin → NumeRealWorks + NohLabWorks 동시 push
-git push numereal   # NumeRealWorks 만
-git push nohlab     # NohLabWorks 만
+git push
 
 # 다른 PC 에서
-git pull            # origin(=NumeRealWorks) 에서 fetch
+git pull
 ```
 
 | remote | URL | 계정 / SSH 키 |
 |---|---|---|
-| `origin` (fetch) | `git@github-numereal:NumeRealWorks/claude-ticket-skills.git` | minhopark-lgtm / `id_rsa_numereal` |
-| `origin` (push) | NumeRealWorks + NohLabWorks 양쪽 | — |
-| `numereal` | `git@github-numereal:NumeRealWorks/…` | minhopark-lgtm / `id_rsa_numereal` |
-| `nohlab` | `git@github.com:NohLabWorks/…` | minhopark1271 / `id_rsa` |
+| `origin` | `git@github-numereal:NumeRealWorks/claude-ticket-skills.git` | minhopark-lgtm / `id_rsa_numereal` |
 
 > `github-numereal` 은 `~/.ssh/config` 의 Host alias 다. 새 PC 에서는 해당 alias 와 `IdentityFile ~/.ssh/id_rsa_numereal` 등록이 선행돼야 NumeRealWorks 접근이 된다.
