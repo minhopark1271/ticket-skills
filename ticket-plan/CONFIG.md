@@ -258,6 +258,7 @@ minimal 3 키로 출발하고, **프로젝트별로 필요해진 항목만** 사
 - `sources.obsidian_public` — Mode 2 (Obsidian 추출) source 경로
 - `migration.legacy_tickets` / `migration.legacy_notes` — 구버전 호환 링크
 - `build_test.test` / `lint` / `typecheck` — 빌드/검증 명령 (현재는 각 프로젝트의 CLAUDE.md 참조)
+- `review.checklist` — ticket-review 품질 축 체크리스트 파일 (`project_root` 상대). 항목별 배정 블록을 `→` 로 적는다
 - `pr.base_branch_override` — feature flag PR 등 비표준 base
 - `project.visibility` — private/public
 
