@@ -74,7 +74,7 @@ git worktree add --detach $wt FETCH_HEAD
 
 > **컨벤션 참조**: `CLAUDE.md` (프로젝트 / 전역) 와 프로젝트 설정 파일 (`pyproject.toml`, `eslint.config.*`, `tsconfig.json` 등) 을 우선 참조합니다.
 >
-> **체크리스트**: config 에 `review.checklist` 가 있으면 `${project_root}/${review.checklist}` 를 로드해 항목별로 점검한다. 항목의 `→` 가 배정 블록이다.
+> **체크리스트**: [CHECKLIST.md](CHECKLIST.md) 를 로드해 항목별로 점검한다. 항목의 `→` 가 배정 블록이다.
 
 ## 리뷰 의견 구성
 
