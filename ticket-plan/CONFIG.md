@@ -49,7 +49,7 @@ worktree:
 | `pr.title_pattern` | `{N}-{Short description}` |
 | `pr.close_keyword` | `Closes #{N}` |
 | `pr.co_author` | `Claude Opus 4.7 (1M context) <noreply@anthropic.com>` |
-| `pr.draft` | `false` — PR 을 바로 ready 상태로 연다 |
+| `pr.draft` | `true` — PR 을 draft 로 연다 |
 | `pr.merge_method` | `squash` |
 | **Universal labels** (lazy 생성) | `~/.claude/skills/ticket-plan/SKILL.md` 의 "지연 초기화" 섹션 참조 |
 
@@ -73,17 +73,17 @@ Issue body `## Related` 에 아래 형식의 줄이 있으면 그 값이 브랜�
 
 ## Optional — PR 운용
 
-기본값(`draft: false` · `merge_method: squash`)이 안 맞는 프로젝트만 적는다.
+기본값(`draft: true` · `merge_method: squash`)이 안 맞는 프로젝트만 적는다.
 
 ```yaml
 pr:
-  draft: true            # PR 을 draft 로 생성
+  draft: false           # PR 을 바로 ready 상태로 생성
   merge_method: merge    # squash | merge | rebase
 ```
 
 | 키 | 타입 | 기본 | 설명 |
 |---|---|---|---|
-| `pr.draft` | bool | `false` | `true` 면 `gh pr create` 에 `--draft`. **ticket-complete 가 머지하지 않고 중단**한다 — draft 해제는 사람이 한다 |
+| `pr.draft` | bool | `true` | `true` 면 `gh pr create` 에 `--draft`. **ticket-complete 가 머지하지 않고 중단**한다 — draft 해제는 사람이 한다. `false` 면 ready 로 열고 머지까지 진행 |
 | `pr.merge_method` | enum | `squash` | `gh pr merge` 플래그. 커밋 단위 bisect·부분 revert 를 유지해야 하는 프로젝트는 `merge` |
 
 **`pr.draft: true` 의 의도**는 CI 발동 시점을 사람이 잡는 것이다. draft PR 은 CI 를 돌리지 않으므로 구현이 최종 상태가 된 뒤 `gh pr ready {N}` 로 해제해 발동시키고, 통과를 확인한 다음 머지한다. 스킬이 `gh pr ready` 를 자동 호출하면 이 통제가 사라지므로 **금지**다.

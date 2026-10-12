@@ -102,7 +102,7 @@ EOF
 
 **필수**:
 - `--base ${base}` (Issue 브랜치 줄이 없으면 `${project.default_branch}`)
-- `pr.draft: true` 면 `--draft` 추가 (CONFIG.md "PR 운용"). 기본은 붙이지 않음
+- `pr.draft` (기본 `true`) 면 `--draft` 추가 (CONFIG.md "PR 운용"). `false` 일 때만 생략
 - 본문에 `Closes #{N}` 한 줄 — base 가 repo 기본 브랜치면 머지 시 자동 close, 아니면 기록용이고 Step 9-6 이 닫는다
 - PR 제목: `{N}-{Short description}`
 
