@@ -30,7 +30,7 @@ GitHub Issue 로 Claude Code 가 실행할 개발 티켓을 구조적으로 작�
 
 - **티켓**: GitHub Issues (`gh issue ...`). 티켓 번호 = Issue 번호
 - **레포**: `${project.repo}`, 기본 브랜치 `${project.default_branch}`
-- **설계 노트**: `ticket-doc` 이 `${project_root}/.notes/` 에 untracked 개인 기록으로 관리. Issue body 는 노트를 참조하지 않는다 — Issue 는 그 자체로 완결
+- **설계 노트**: `ticket-doc` 이 `${notes.dir}` (기본 `${project_root}/.notes/`) 에 개인 기록으로 관리. Issue body 는 노트를 참조하지 않는다 — Issue 는 그 자체로 완결
 
 ## 지연 초기화 — Universal 라벨 (첫 호출 시)
 
@@ -88,7 +88,7 @@ gh label create "infra" --color "BFD4F2" --description "인프라 / DevOps" --fo
 
 #### Step 2.5: 설계 평가 (조건부 필수)
 
-Step 2 의 분석 결과, 아래 트리거 중 **하나 이상 해당**하면 설계를 도출합니다. 도출 과정은 `.notes/` 에 기록하고, Issue 의 `## 변경` 에는 **채택안 1줄 + 기각 1줄 + 바꾸는 계약** 을 남깁니다.
+Step 2 의 분석 결과, 아래 트리거 중 **하나 이상 해당**하면 설계를 도출합니다. 도출 과정은 `${notes.dir}` 에 기록하고, Issue 의 `## 변경` 에는 **채택안 1줄 + 기각 1줄 + 바꾸는 계약** 을 남깁니다.
 
 | 트리거 | 예 |
 |---|---|
@@ -106,10 +106,10 @@ Step 2 의 분석 결과, 아래 트리거 중 **하나 이상 해당**하면 �
 3. **대안 비교** — 각 후보의 장점·단점·복잡도·확장성·기존 코드와의 정합성을 표로 평가.
 4. **최적 선택** — 어떤 후보를 채택할지 + **선택 근거** 명시. 후순위 대안은 기각 사유 1줄.
 5. **산출물 배치**:
-   - **`.notes/`** (문서화 단계에서 ticket-doc Type A, 개인 기록) — 대안 비교 표 · 자료 구조 · 클래스 hierarchy · 핵심 시그니처 · 상세 로직
+   - **`${notes.dir}`** (문서화 단계에서 ticket-doc Type A, 개인 기록) — 대안 비교 표 · 자료 구조 · 클래스 hierarchy · 핵심 시그니처 · 상세 로직
    - **Issue `## 변경`** — `**방안 X 채택** — {근거 1줄}` + `({기각안}: {기각 사유})` + 바꾸는 계약 · 규칙 bullet. 노트 링크 없음
 
-자료 구조 · hierarchy · 시그니처 코드 블록을 Issue body 에 붙여넣지 않습니다. 이 셋은 `.notes/` 소유이며, Issue 는 계약을 문장으로 적어 링크 없이 완결되게 합니다.
+자료 구조 · hierarchy · 시그니처 코드 블록을 Issue body 에 붙여넣지 않습니다. 이 셋은 `${notes.dir}` 소유이며, Issue 는 계약을 문장으로 적어 링크 없이 완결되게 합니다.
 
 #### Step 3: 티켓 분할 평가
 
@@ -240,7 +240,7 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 - 데이터 흐름 / 아키텍처 다이어그램 수준 포함
 
 **실행 순서**:
-1. `ticket-doc` Type A 호출 → `${project_root}/.notes/{issue-number}-{seq}-{analysis-title}.md` 작성 (예: `115-1-websocket-flow-analysis.md`)
+1. `ticket-doc` Type A 호출 → `${notes.dir}/{issue-number}-{seq}-{analysis-title}.md` 작성 (예: `115-1-websocket-flow-analysis.md`)
 2. Issue body 는 수정하지 않는다 — 노트는 untracked 개인 기록이라 URL 이 없고, Issue 는 노트 없이 완결되어야 한다
 
 **해당 없으면** 스킵.
@@ -319,8 +319,8 @@ Issue 생성 후, 리뷰 흐름 진입 전에 자동 실행.
 |---|---|
 | **현상** / **문제** 변경 | → 변경 · 기대 정합성 확인 |
 | **범위** 변경 | → 현재 구조 · 변경 · Implementation Plan Files 동기화 |
-| **현재 구조** 변경 | → 문제의 인과와 변경의 전제 재확인. `.notes/` 설계 노트의 현황 분석 반영 |
-| **변경** 의 채택안 교체 | → `.notes/` 노트의 대안 비교 · 자료 구조 · 시그니처 갱신 + 기각 사유 보정 + Implementation Plan 재구성 |
+| **현재 구조** 변경 | → 문제의 인과와 변경의 전제 재확인. `${notes.dir}` 설계 노트의 현황 분석 반영 |
+| **변경** 의 채택안 교체 | → `${notes.dir}` 노트의 대안 비교 · 자료 구조 · 시그니처 갱신 + 기각 사유 보정 + Implementation Plan 재구성 |
 | **변경** 항목 추가/삭제 | → 기대 · Implementation Plan Phase 동기화 |
 | **기대** 추가/수정 | → 변경 에 대응 항목이 있는지 확인 |
 | **Implementation Plan** Phase 추가/삭제/수정 | → 기대의 검증 대상 · Related 파일 동기화 |
@@ -390,7 +390,7 @@ Issue body 는 **필수 6 섹션 + 옵셔널 2 섹션**. 각 섹션은 한 가�
 | `## Implementation Plan` (옵셔널) | 어떤 순서로 바꾸나 | Phase 당 Files · Changes 2줄 (Notes 는 엣지 케이스 있을 때만) |
 | `## Related` (옵셔널) | 무엇과 엮여 있나 | 제한 없음 |
 
-**body 전체 50줄 기준**. Issue 는 링크 없이 완결되어야 하므로 결정 · 계약 · 완료 기준은 분량 때문에 빼지 않습니다. 줄이는 대상은 중복 · 서술 · 도출 과정이고, 덜어낸 분석은 `ticket-doc` Type A 로 `.notes/` 에 남깁니다. 100줄을 넘기면 Step 3 의 분할을 검토합니다.
+**body 전체 50줄 기준**. Issue 는 링크 없이 완결되어야 하므로 결정 · 계약 · 완료 기준은 분량 때문에 빼지 않습니다. 줄이는 대상은 중복 · 서술 · 도출 과정이고, 덜어낸 분석은 `ticket-doc` Type A 로 `${notes.dir}` 에 남깁니다. 100줄을 넘기면 Step 3 의 분할을 검토합니다.
 
 **시점 분리가 핵심** — `현재 구조` 는 사실, `변경` 은 결정. 한 목록에 섞이면 불릿마다 시점이 바뀌어 무엇이 사실이고 무엇이 결정인지 구분되지 않습니다. `범위` 의 "안 건드림" 이 범위 경계 (타 Issue 소유 · 의도적 미수정 · 후속 후보) 를 담습니다.
 
@@ -526,7 +526,7 @@ PR 생성 형식은 `ticket-complete` Step 4 참조. 핵심:
 
 - 현상 은 관측된 사실, 기대 는 결과 (outcome). 활동 (activity) 을 적지 않습니다
 - 현재 구조 는 사실, 변경 은 결정. 한쪽에 다른 쪽을 섞지 않습니다
-- 자료 구조 · hierarchy · 시그니처 코드 블록은 `.notes/` 소유. Issue 엔 채택 근거 + 계약 문장
+- 자료 구조 · hierarchy · 시그니처 코드 블록은 `${notes.dir}` 소유. Issue 엔 채택 근거 + 계약 문장
 - 섹션 분량은 기준. 완결에 필요하면 넘길 수 있고, 줄이는 대상은 중복 · 서술 · 도출 과정
 - Implementation Plan Phase 는 작고 체크 가능한 단위
 - Related 에 코드 파일 경로 + Issue 링크 혼재 허용

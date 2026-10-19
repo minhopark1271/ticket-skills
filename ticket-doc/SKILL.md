@@ -1,11 +1,11 @@
 ---
 name: ticket-doc
-description: GitHub Issue 와 연동된 기술 문서를 repo 루트 .notes/ 에 개인 기록으로 생성·관리합니다 (untracked, 미발행). 배경 조사, 설계 결정, 구현 분석, 실험 결과, 브레인스토밍, 상세 기술 문서를 작성할 때 사용. ticket-plan 및 ticket-implement 가 자동 호출하거나, 브레인스토밍/사후 분석을 위해 수동 호출. 프로젝트별 설정은 {project_root}/.claude/ticket-skill-configs.yaml 에서 읽습니다.
+description: GitHub Issue 와 연동된 기술 문서를 노트 디렉토리 (기본 repo 루트 .notes/, config notes.dir 로 변경 가능) 에 개인 기록으로 생성·관리합니다. 배경 조사, 설계 결정, 구현 분석, 실험 결과, 브레인스토밍, 상세 기술 문서를 작성할 때 사용. ticket-plan 및 ticket-implement 가 자동 호출하거나, 브레인스토밍/사후 분석을 위해 수동 호출. 프로젝트별 설정은 {project_root}/.claude/ticket-skill-configs.yaml 에서 읽습니다.
 ---
 
 # Ticket Documentation
 
-GitHub Issue 와 연동된 기술 문서를 `${project_root}/.notes/` 에 **개인 기록**으로 생성 및 관리합니다. untracked 이며 발행하지 않습니다 — Issue 는 노트를 참조하지 않고 그 자체로 완결됩니다.
+GitHub Issue 와 연동된 기술 문서를 `${notes.dir}` (기본 `${project_root}/.notes/`) 에 **개인 기록**으로 생성 및 관리합니다. 기본 위치에서는 untracked 이며 발행하지 않습니다 — Issue 는 노트를 참조하지 않고 그 자체로 완결됩니다.
 
 ## Bootstrap (모든 호출 시 첫 단계)
 
@@ -15,20 +15,21 @@ GitHub Issue 와 연동된 기술 문서를 `${project_root}/.notes/` 에 **개�
 
 ## 데이터 소스
 
-- **노트 디렉토리**: `${project_root}/.notes/` — 메인 worktree 루트. 어느 worktree 에서 호출해도 같은 위치
-- **untracked · 개인용**: git 에 추가하지 않고 push 도 없다. 공유가 필요하면 사용자가 Notion · Wiki 등에 직접 게시
+- **노트 디렉토리**: `${notes.dir}` — 기본 `${project_root}/.notes/` (메인 worktree 루트). config `notes.dir` 로 프로젝트 밖 (예: 형제 저장소 `../<repo>.notes`) 을 지정할 수 있다. 어느 worktree 에서 호출해도 같은 위치
+- **개인용**: 기본 위치는 untracked 이며 push 도 없다. `notes.dir` 이 자체 git 저장소면 사용자 요청 시 노트 파일만 커밋·푸시한다. 공유가 필요하면 사용자가 Notion · Wiki 등에 직접 게시
 - **Issue 와의 관계**: Issue body · comment 는 노트를 참조하지 않는다. 노트는 Issue 를 `#{N}` 으로 가리킨다 (단방향)
 - 문서 = 마크다운 파일 (`.md`)
 
 ## 지연 초기화 — 노트 디렉토리 (첫 호출 시)
 
 ```bash
-mkdir -p ${project_root}/.notes
+mkdir -p ${notes.dir}
+# 프로젝트 루트 안일 때만 (untracked 유지)
 exclude="$(git -C ${project_root} rev-parse --path-format=absolute --git-common-dir)/info/exclude"
 grep -qx '.notes/' "$exclude" || echo '.notes/' >> "$exclude"
 ```
 
-`.git/info/exclude` 는 로컬 전용 ignore — 공유 `.gitignore` 를 건드리지 않고 `git status` 노이즈와 실수 커밋을 막는다.
+`.git/info/exclude` 는 로컬 전용 ignore — 공유 `.gitignore` 를 건드리지 않고 `git status` 노이즈와 실수 커밋을 막는다. `notes.dir` 이 프로젝트 루트 밖이면 exclude 단계는 건너뛴다.
 
 ## 호출 모드
 
@@ -62,7 +63,7 @@ grep -qx '.notes/' "$exclude" || echo '.notes/' >> "$exclude"
 - `58-1-market-condition-analysis.md`
 - `25-1-swing-model-architecture.md`
 
-**경로**: `${project_root}/.notes/{파일명}`. 문서 제목은 파일의 `# ` 헤더.
+**경로**: `${notes.dir}/{파일명}`. 문서 제목은 파일의 `# ` 헤더.
 
 ## 사용 절차
 
@@ -73,7 +74,7 @@ grep -qx '.notes/' "$exclude" || echo '.notes/' >> "$exclude"
    - **독립 모드**: 사용자가 지정한 Issue 번호로 `gh issue view {N} --repo "${project.repo}"` 로 내용 파악
 2. **기존 문서 확인**: 같은 Issue 번호의 문서가 있는지 확인
    ```bash
-   ls ${project_root}/.notes/{N}-*.md 2>/dev/null
+   ls ${notes.dir}/{N}-*.md 2>/dev/null
    ```
 3. **디렉토리 보장**: 없으면 위 "지연 초기화" 수행
 4. **순번 결정**: 해당 Issue 의 마지막 순번 + 1 (첫 문서면 1)
@@ -112,7 +113,7 @@ grep -qx '.notes/' "$exclude" || echo '.notes/' >> "$exclude"
 **독립 모드 전용 Step**:
 1. 사용자 요청에서 **대상 Issue 번호** 와 **문서 목적** 파악
 2. `gh issue view {N} --repo "${project.repo}"` 로 현재 상태·배경·결과 컨텍스트 파악
-3. 해당 Issue 의 기존 `.notes/` 문서도 읽어서 중복 방지
+3. 해당 Issue 의 기존 `${notes.dir}` 문서도 읽어서 중복 방지
 4. 필요 시 관련 코드/데이터 추가 탐색
 5. 문서 목적에 맞는 내용을 **대화형** 으로 사용자와 함께 구성
 
@@ -129,7 +130,7 @@ grep -qx '.notes/' "$exclude" || echo '.notes/' >> "$exclude"
 2. **하이레벨 + 디테일 균형**: 큰 그림 설명 → 각 섹션 디테일 빠짐없이
 3. **구조화**: 표, 코드 블록, 다이어그램 적극 활용
 4. **데이터 보존**: 수치, 파라미터, 설정값 등 재현에 필요한 정보 모두 포함
-5. 파일 저장 위치: `${project_root}/.notes/{N}-{seq}-{title-kebab}.md`
+5. 파일 저장 위치: `${notes.dir}/{N}-{seq}-{title-kebab}.md`
 
 ### Step 4: 상호 참조 링크
 
@@ -140,7 +141,7 @@ Issue → 노트 방향 링크는 **만들지 않는다** — Issue 는 노트 �
 
 #### 4-2. 문서 ↔ 문서 (양방향)
 
-- 같은 Issue 의 기존 문서 확인: `ls ${project_root}/.notes/{N}-*.md`
+- 같은 Issue 의 기존 문서 확인: `ls ${notes.dir}/{N}-*.md`
 - 기존 문서가 있으면:
   1. **새 문서 → 기존 문서**: 새 문서 상단에 `> 기반 문서: [{제목}]({기존 파일명}.md)`
   2. **기존 문서 → 새 문서**: 기존 문서의 `## 후속 작업` 또는 본문 말미에 `[{제목}]({새 파일명}.md)` 추가
@@ -154,13 +155,15 @@ Issue → 노트 방향 링크는 **만들지 않는다** — Issue 는 노트 �
 - [ ] 새 문서에 기존 문서 링크 포함됨 (기존 문서 있는 경우)
 - [ ] Issue body · comment 를 수정하지 않았음
 
-### Step 5: 종료 — 커밋·발행 없음
+### Step 5: 종료 — 커밋은 `notes.dir` 위치에 따라
 
-이 스킬은 `git add` · commit · push 를 하지 않는다. `.notes/` 는 untracked 개인 기록이며, 공유는 사용자가 Notion · Wiki 등에 직접 게시한다.
+기본 위치 (`${project_root}/.notes/`) 에서는 `git add` · commit · push 를 하지 않는다. untracked 개인 기록이며, 공유는 사용자가 Notion · Wiki 등에 직접 게시한다.
+
+`notes.dir` 이 자체 git 저장소면 사용자가 요청할 때 그 저장소에서 노트 파일만 `git add` 해 커밋·푸시한다. 그 저장소의 다른 미커밋 변경은 건드리지 않는다.
 
 **독립 모드 종료 보고**:
 ```
-노트 저장됨: .notes/{N}-{seq}-{title-kebab}.md
+노트 저장됨: ${notes.dir}/{N}-{seq}-{title-kebab}.md
 ```
 
 ## 템플릿
@@ -391,4 +394,4 @@ GitHub(Issue body·comment)는 GFM 이라 물결 하나짜리 `~텍스트~` 도 
 - **독립 모드**: 반드시 기존 Issue 와 연동 (Issue 없는 독립 문서는 대상 X)
 - 독립 모드로 브레인스토밍 문서 작성 후, 실행할 아이디어가 나오면 `ticket-plan` 으로 새 Issue 생성 권유
 - **Type B 의 후속 작업**: 단순 리스트로만 — 다른 Issue 를 자동 수정하거나 라벨/comment 를 추가하지 않습니다 (정보량 폭증 방지)
-- `.notes/` 는 untracked 개인 기록 — commit · push · Issue 참조 모두 하지 않는다. 공유는 사용자가 직접
+- 노트는 개인 기록 — Issue 참조는 하지 않는다. 기본 위치에서는 commit · push 도 하지 않는다 (Step 5). 공유는 사용자가 직접

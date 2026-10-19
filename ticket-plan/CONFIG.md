@@ -43,7 +43,6 @@ worktree:
 
 | 항목 | 유도/기본값 |
 |---|---|
-| `notes.dir` | `${project_root}/.notes/` — ticket-doc 의 untracked 개인 노트 디렉토리. 발행·Issue 참조 없음 |
 | `branch_pattern` | `{N}-{slug}` — Issue body 에 브랜치 줄이 있으면 그 값 (아래 "브랜치 해석") |
 | `worktree_pattern` | `${worktree.prefix}-{N}-{slug}` |
 | `pr.title_pattern` | `{N}-{Short description}` |
@@ -91,6 +90,28 @@ pr:
 **`pr.merge_method: merge` 를 쓰는 경우** — "티켓 1개 = 커밋 1개" 를 전제로 PR 을 쪼갠 프로젝트. squash 는 그 전제를 깨서 bisect 와 부분 revert 가 커밋 수준에서 죽는다.
 
 이 값이 `merge` 면 **커밋 분할도 스킬 동작이 된다** — ticket-implement 가 Implementation Plan Phase 마다 커밋 1개를 남기고(Phase 6.7), ticket-complete 는 커밋을 새로 만들지 않는다(Step 2).
+
+## Optional — 노트 디렉토리
+
+ticket-doc 의 노트를 프로젝트 안 `.notes/` 가 아닌 곳에 둘 때만 적는다. 생략 시 `${project_root}/.notes/`.
+
+```yaml
+notes:
+  dir: ../<repo>.notes   # ${project_root} 기준 상대경로 또는 절대경로
+```
+
+| 키 | 타입 | 기본 | 설명 |
+|---|---|---|---|
+| `notes.dir` | string | `${project_root}/.notes/` | 노트 파일 위치. 스킬 본문의 `${notes.dir}` 로 치환 |
+
+위치에 따라 ticket-doc 의 동작이 갈린다.
+
+| `notes.dir` | 지연 초기화 | 커밋·푸시 |
+|---|---|---|
+| 프로젝트 루트 안 (기본) | `mkdir -p` + `.git/info/exclude` 에 `.notes/` 추가 | 하지 않음 (untracked 개인 기록) |
+| 프로젝트 루트 밖 | `mkdir -p` 만 | 그 디렉토리가 자체 git 저장소면 사용자 요청 시 노트 파일만 커밋·푸시 |
+
+개인 노트 저장소처럼 사람마다 다른 경로면 로컬 override 에 둔다.
 
 ## Optional — Branch Override
 
@@ -205,6 +226,7 @@ board:
 | `${project.repo}` | config | `minhopark1271/asdf` |
 | `${project.default_branch}` | config | `master` |
 | `${worktree.prefix}` | config | `asdf` |
+| `${notes.dir}` | config (옵셔널, 기본 `${project_root}/.notes/`) | `../DashOpti_GUI.notes` |
 | `${project.gh_account}` | config (옵셔널) | `minhopark-lgtm` |
 | `${project.git_email}` | config (옵셔널) | `minhopark@numereal.ai` |
 | `${project_root}` | **메타 변수** (Bootstrap 1번 결과 — **메인 worktree 루트**. worktree 안에서 실행해도 메인을 가리킨다) | `/Users/minhopark/Projects/asdf` |
@@ -246,7 +268,7 @@ board:
 | 스킬 | Lazy 액션 |
 |---|---|
 | `ticket-plan` | `gh label create --force` 로 universal 라벨 12개 보장 (이미 있으면 no-op) + (`board` 있으면) 첫 `Set-BoardStatus` 호출 시 board 좌표 lazy 해석·캐시 (위 "Board 좌표 lazy 해석") |
-| `ticket-doc` | `${project_root}/.notes/` 없으면 `mkdir -p` + `.git/info/exclude` 에 `.notes/` 추가 (ticket-doc "지연 초기화") |
+| `ticket-doc` | `${notes.dir}` 없으면 `mkdir -p`; 프로젝트 루트 안이면 `.git/info/exclude` 에 `.notes/` 추가 (ticket-doc "지연 초기화") |
 | 그 외 | board 좌표가 미캐시면 `Set-BoardStatus` 가 첫 호출 시 lazy 해석 (진입점이 ticket-plan 이 아니어도 동작) |
 
 ## 확장 정책 — "한 항목씩 추가"

@@ -11,7 +11,7 @@ GitHub Issue 의 진행 상황을 업데이트합니다. 작업 시작, 진행 �
 
 `{project_root}/.claude/ticket-skill-configs.yaml` (+ 로컬 `ticket-skill-configs.local.yaml` override, 있으면) 로드·병합 → minimal 3 키 검증 → **계정 라우팅** → `${var}` 치환. 상세 절차와 변수 매핑: `~/.claude/skills/ticket-plan/CONFIG.md`.
 
-`${project_root}` 는 현재 worktree 가 아니라 **메인 worktree 루트**다 — Type B(진행 기록)는 worktree 안에서 호출되는데 `.claude/` 와 `.notes/` 는 메인에만 있다.
+`${project_root}` 는 현재 worktree 가 아니라 **메인 worktree 루트**다 — Type B(진행 기록)는 worktree 안에서 호출되는데 `.claude/` 와 `${notes.dir}` 는 메인 루트 기준 경로다.
 
 핵심 치환:
 - `${project.repo}`, `${project.default_branch}`, `${worktree.prefix}` ← config
@@ -24,7 +24,7 @@ GitHub Issue 의 진행 상황을 업데이트합니다. 작업 시작, 진행 �
 - **티켓**: GitHub Issues (`${project.repo}`). 티켓 번호 = Issue 번호.
 - **진행 로그**: Issue comments (`gh issue comment`)
 - **상태**: Issue 라벨 + open/closed state
-- **설계 노트**: `${project_root}/.notes/{N}-*.md` — `ticket-doc` 이 쓰는 untracked 개인 기록. Issue 에는 참조하지 않는다
+- **설계 노트**: `${notes.dir}/{N}-*.md` — `ticket-doc` 이 쓰는 개인 기록. Issue 에는 참조하지 않는다
 
 ## 자동 파이프라인 (인자로 Issue 번호 전달 시)
 
@@ -38,7 +38,7 @@ GitHub Issue 의 진행 상황을 업데이트합니다. 작업 시작, 진행 �
 ```bash
 gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state,url,comments
 ```
-1. body 의 현상 / 범위 / 현재 구조 / 문제 / 변경 / 기대 + Implementation Plan (옵셔널) 섹션 확인. `${project_root}/.notes/{N}-*.md` 가 있으면 계획 단계의 설계 노트 — 함께 읽는다 (Issue 와 어긋나면 Issue 가 기준)
+1. body 의 현상 / 범위 / 현재 구조 / 문제 / 변경 / 기대 + Implementation Plan (옵셔널) 섹션 확인. `${notes.dir}/{N}-*.md` 가 있으면 계획 단계의 설계 노트 — 함께 읽는다 (Issue 와 어긋나면 Issue 가 기준)
 2. 라벨에서 상태/우선순위/카테고리/컴포넌트 파악
 3. body 의 `## Related` 에 `#{N}` 으로 참조된 다른 Issue 가 있으면 `gh issue view` 로 간단히 확인
 4. `## Related` 의 브랜치 줄로 `${branch}`·`${base}` 확정 (CONFIG.md "브랜치 해석")
@@ -51,7 +51,7 @@ gh issue view {N} --repo "${project.repo}" --json number,title,body,labels,state
 4. 파악 내용을 사용자에게 짧게 요약 (수정 대상 파일/심볼 목록 + 영향 범위)
 
 ### Phase 3: 구현 계획 재정비
-1. Issue 의 변경 / 기대 / Implementation Plan (+ `.notes/` 설계 노트, 있으면) 을 Phase 2 의 실제 코드 상태와 비교
+1. Issue 의 변경 / 기대 / Implementation Plan (+ `${notes.dir}` 설계 노트, 있으면) 을 Phase 2 의 실제 코드 상태와 비교
 2. 차이가 있으면 구현 단계를 재구성 (어떤 순서로 어떤 파일을 수정할지)
 3. 발견된 이슈/제약/추가 작업 항목 정리
 4. 재정비된 계획을 사용자에게 짧은 단계 목록으로 제시 (3~7 단계 권장)
@@ -151,7 +151,7 @@ state 가 `CLOSED` 면 사용자에게 확인 (이미 완료된 Issue 일 수 �
    - 다음 단계
    - PR 링크 (있으면)
    - 후속 작업 (현재 Issue 범위 밖에서 발견한 항목 — 있을 때만)
-4. **문서화 (선택)**: 진행 중 발견한 중요한 기술적 인사이트, 실험 결과, 또는 분석 데이터가 comment 에 담기엔 상세하면 `ticket-doc` Type B 자동 호출 → `.notes/` 에 기록. comment 에는 결론만 적고 노트를 참조하지 않는다 (comment 도 그 자체로 완결)
+4. **문서화 (선택)**: 진행 중 발견한 중요한 기술적 인사이트, 실험 결과, 또는 분석 데이터가 comment 에 담기엔 상세하면 `ticket-doc` Type B 자동 호출 → `${notes.dir}` 에 기록. comment 에는 결론만 적고 노트를 참조하지 않는다 (comment 도 그 자체로 완결)
 
 #### Type C: 완료 (in-progress → completed)
 
